@@ -1,4 +1,4 @@
-## vim: set filetype=mako:
+# vim: set filetype=mako:
 <!DOCTYPE html>
 <html>
 <head>
@@ -73,8 +73,8 @@
   }
 </style>
 <body>
-  <% from bauble.plugins.report import get_locations_pertinent_to %>\
-  % for l in get_locations_pertinent_to(values):
+  <% from bauble.plugins.report import get_location_pertinent_to %>\
+  % for l in get_location_pertinent_to(values):
     <%
       plist=[]
       for plant in l.plants:
