@@ -1,0 +1,16 @@
+## vim: set filetype=mako:
+<%! from bauble.plugins.report import get_locations_pertinent_to %>\
+##
+Code,Name,Description,Species
+%for l in get_locations_pertinent_to(values):
+  ## Make a list of species present for each location
+  <%
+    splist=[]
+    for plant in l.plants:
+      sp = plant.accession.species_str()
+      if sp not in splist:
+        splist.append(sp)
+    splist.sort()
+  %>\
+"bed#:${l.code or ''}","${l.name or ''}","${l.description or ''}","${', '.join(splist)}"
+% endfor

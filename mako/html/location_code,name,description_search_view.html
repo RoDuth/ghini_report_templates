@@ -1,0 +1,54 @@
+## vim: set filetype=mako:
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Locations</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<style type="text/css" media="all">
+  ## better printing
+  @page {
+    margin: 5%;
+  }
+  @media print {
+    body {
+      overflow: visible;
+    }
+    .location {
+      padding: 0 2px;
+      page-break-inside: avoid;
+      page-break-before: auto;
+      page-break-after: auto;
+    }
+  }
+
+  .location {
+    margin: 2px 2%;
+    font-family: Arial,sans-serif;
+  }
+  .name {
+    font-size: 20px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    font-family: Arial,sans-serif;
+    font-weight: bold;
+    color: black;
+  }
+  .description {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-family: Arial,sans-serif;
+    font-size: 14px;
+    color: #333;
+  }
+</style>
+<body>
+  <% from bauble.plugins.report import get_locations_pertinent_to %>\
+  % for l in get_locations_pertinent_to(values):
+    <div class="location">
+      <h3 class="name">(${l.code})  ${l.name}</h3>
+      <p class="description">${l.description}</p>
+    </div>
+  % endfor
+</body>

@@ -1,0 +1,10 @@
+## vim: set filetype=mako:
+<% from bauble.plugins.report import get_locations_pertinent_to %>\
+##
+Code,Name,Description
+##
+% for l in get_locations_pertinent_to(values):
+##
+"bed#:${l.code}","${l.name}","${l.description}"
+##
+% endfor

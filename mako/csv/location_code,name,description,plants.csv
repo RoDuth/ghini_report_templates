@@ -1,0 +1,15 @@
+## vim: set filetype=mako:
+<%! from bauble.plugins.report import get_locations_pertinent_to %>\
+## this is the headers for the columns
+Code,Name,Description,Accessions
+%for l in get_locations_pertinent_to(values):
+  ## make a list of plants for each location
+  <%
+    plist=[]
+    for plant in l.plants:
+      p = plant.__str__()
+      plist.append(p)
+  %>\
+## output the values (or leave blank if None) in quotes seperated by commas
+"(${l.code or ''})","${l.name or ''}","${l.description or ''}","${', '.join(plist)}"
+% endfor

@@ -1,0 +1,99 @@
+## vim: set filetype=mako:
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Locations</title>
+
+<style type="text/css" media="all">
+  /* better printing */
+  @page {
+    margin: 5%;
+  }
+  @media print {
+    /* this seems to be required by some browsers */
+    body {
+      overflow: visible;
+    }
+    .location {
+      padding: 0 2px;
+      page-break-inside: avoid;
+    }
+  }
+
+  * {
+    margin: 0;
+  }
+  .location {
+    font-family: Arial,sans-serif;
+    margin: 0 2%;
+  }
+  .code {
+    float: left;
+    padding-right: 1em;
+  }
+  .name {
+    float: right;
+    text-align: right;
+  }
+  .code, .name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #111;
+    margin-bottom: 5px;
+  }
+  .description {
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #555;
+    clear: both;
+  }
+  .plants {
+    margin-bottom: 10px;
+    padding: 2px;
+    font-size: 11px;
+    color: #777;
+    border: 1px solid #ccc;
+  }
+  .plants ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    -moz-column-width: 6em;
+    -webkit-column-width: 6em;
+    column-width: 6em;
+  }
+
+  hr {
+    margin-bottom: 5px;
+    margin-top: 5px;
+    margin-right: 5%;
+    margin-left: 5%;
+    clear: both;
+    border-top: 1px solid #ccc;
+  }
+</style>
+<body>
+  <% from bauble.plugins.report import get_locations_pertinent_to %>\
+  % for l in get_locations_pertinent_to(values):
+    <%
+      plist=[]
+      for plant in l.plants:
+          plist.append(plant)
+    %>
+    <div class="location">
+      <h3 class="code">${l.code or ''}</h3>
+      <h3 class="name">${l.name or ''}</h3>
+      <p class="description">${l.description or ''}</p>
+      % if plist:
+        <div class="plants" style="">
+          <ul>
+            % for p in plist:
+                <li>${p}</li>
+            % endfor
+          </ul>
+        </div>
+      % endif
+      <hr>
+    </div>
+  % endfor
+</body>

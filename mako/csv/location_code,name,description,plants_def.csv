@@ -1,0 +1,17 @@
+## vim: set filetype=mako:
+<%! from bauble.plugins.report import get_locations_pertinent_to %>\
+## Convert the list of plants to a string separated by semicolons
+<%def name="plantlist(l)">
+  % for plant in l.plants:
+    % if l.plants.index(plant) == len(l.plants)-1:
+${plant.__str__()}
+    % else:
+${plant.__str__()}; \
+    % endif
+  % endfor
+</%def>\
+Code,Name,Description,Accessions
+##
+%for l in get_locations_pertinent_to(values):
+"bed#:${l.code or ''}","${l.name or ''}","${l.description or ''}","${plantlist(l)}"
+% endfor
