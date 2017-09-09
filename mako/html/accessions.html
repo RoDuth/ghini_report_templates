@@ -1,0 +1,20 @@
+## vim: set filetype=mako:
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Accessions</title>
+  <meta charset="UTF-8">
+
+<style type="text/css" media="all">
+  .value {
+    font-family: Arial,sans-serif;
+    margin: 0.5ex;
+  }
+</style>
+
+<body>
+  <% from bauble.plugins.report import get_accessions_pertinent_to %>
+  % for acc in get_accessions_pertinent_to(values):
+    <p class="value">${acc}</p>
+  % endfor
+</body>

@@ -1,0 +1,20 @@
+## vim: set filetype=mako:
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Locations</title>
+  <meta charset="UTF-8">
+
+<style type="text/css" media="all">
+  .value {
+    font-family: Arial,sans-serif;
+    margin: 0.5ex;
+  }
+</style>
+
+<body>
+  <% from bauble.plugins.report import get_location_pertinent_to %>
+  % for l in get_location_pertinent_to(values):
+    <p class="value">${l.code or ''}  ${l.name or ''}</p>
+  % endfor
+</body>
