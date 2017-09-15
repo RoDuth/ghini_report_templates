@@ -1,0 +1,12 @@
+## vim: set filetype=mako:
+Code,Name,Description,Plants
+##
+% for value in values:
+  <%
+    plist=[]
+    for plant in value.plants:
+      p = plant.__str__()
+      plist.append(p)
+  %>\
+"${value.code}","${value.name}","${value.description}","${', '.join(plist)}"
+% endfor
