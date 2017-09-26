@@ -1,8 +1,8 @@
 ## vim: set filetype=mako:
-<%! from bauble.plugins.report import get_location_pertinent_to %>\
+<%! from bauble.plugins.report import get_locations_pertinent_to %>\
 ##
 Code,Name,Description,Species
-%for l in get_location_pertinent_to(values):
+%for l in get_locations_pertinent_to(values):
   ## Make a list of species present for each location
   <%
     splist=[]

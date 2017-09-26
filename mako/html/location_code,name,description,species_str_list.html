@@ -67,8 +67,8 @@
   }
 </style>
 <body>
-  <% from bauble.plugins.report import get_location_pertinent_to %>\
-  % for l in get_location_pertinent_to(values):
+  <% from bauble.plugins.report import get_locations_pertinent_to %>\
+  % for l in get_locations_pertinent_to(values):
     <%
       splist=[]
       for plant in l.plants:
