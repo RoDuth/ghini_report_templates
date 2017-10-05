@@ -15,7 +15,7 @@ Location,Plant,Species
   % for p in items[loc]:
 "${p[0]}","${p[1]}"
     % if items[loc].index(p)< len(items[loc])-1:
- ,\
+,\
     % endif
   % endfor
 % endfor

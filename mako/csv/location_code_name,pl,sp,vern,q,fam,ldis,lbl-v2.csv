@@ -1,0 +1,41 @@
+## vim: set filetype=mako:
+<%! from bauble.plugins.report import get_plants_pertinent_to %>\
+locCode,Location Name,Plant,Species,Common Name,family,quantity,Distribution,Label Note
+<%
+  items = {}
+  for p in get_plants_pertinent_to(values):
+    loc = (p.location.code, p.location.name)
+    try:
+      label_note = p.label
+    except AttributeError:
+      label_note = ''
+    cols = (
+      p,
+      p.accession.species_str(),
+      p.accession.species.default_vernacular_name,
+      p.accession.species.genus.family,
+      p.quantity,
+      p.accession.species.label_distribution,
+      label_note
+      )
+    if loc in items:
+      items[loc].append(cols)
+    else:
+      items[loc] = [cols]
+%>\
+% for loc in sorted(items.keys()):
+"${loc[0]}:","${loc[1]}",\
+  % for p in items[loc]:
+      % for i in p:
+"${i or ''}"\
+        % if p.index(i)< len(p)-1:
+,\
+        % else:
+
+        % endif
+      % endfor
+    % if items[loc].index(p)< len(items[loc])-1:
+,,\
+    % endif
+  % endfor
+% endfor
