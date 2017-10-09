@@ -1,6 +1,6 @@
 ## vim: set filetype=mako:
 <%! from bauble.plugins.report import get_plants_pertinent_to %>\
-locCode,Location Name,Plant,Species,Common Name,family,quantity,Distribution,Label Note
+locCode,Location Name,Plant,Species,Common Name,Family,Quantity,Distribution,Label Note
 <%
   items = {}
   for p in get_plants_pertinent_to(values):
