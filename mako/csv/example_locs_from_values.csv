@@ -1,4 +1,5 @@
 ## vim: set filetype=mako:
+## use this from a search that returns locations
 Code,Name,Description,Plants
 ##
 % for value in values:
