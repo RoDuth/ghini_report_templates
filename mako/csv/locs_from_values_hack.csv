@@ -1,0 +1,7 @@
+## vim: set filetype=mako:
+## use this from a search that returns locations
+Code,Name,Description,Plants
+##
+% for value in values:
+"${value.code}","${value.name}","${value.description}"
+% endfor
