@@ -1,0 +1,11 @@
+## vim:set ft=mako:
+<%! from bauble.plugins.report import get_species_pertinent_to %>\
+synonym,correct_name
+% for sp in get_species_pertinent_to(values):
+  % if sp.synonyms:
+    % for syn in sp.synonyms:
+"${syn.str(remove_zws=True)}","${sp.str(remove_zws=True)}"
+    % endfor
+  % endif
+% endfor
+

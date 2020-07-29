@@ -1,0 +1,362 @@
+## vim:set ft=mako:
+<%!
+from bauble.plugins.report import get_plants_pertinent_to
+## from https://github.com/Twista/python-polylabel
+## >>>
+from math import sqrt
+import time
+
+try:
+    # Python3
+    from queue import PriorityQueue
+    from math import inf
+except ImportError:
+    # Python2
+    from Queue import PriorityQueue
+
+    inf = float("inf")
+
+
+def _point_to_polygon_distance(x, y, polygon):
+    inside = False
+    min_dist_sq = inf
+
+    for ring in polygon:
+        b = ring[-1]
+        for a in ring:
+
+            if ((a[1] > y) != (b[1] > y) and
+                    (x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0])):
+                inside = not inside
+
+            min_dist_sq = min(min_dist_sq, _get_seg_dist_sq(x, y, a, b))
+            b = a
+
+    result = sqrt(min_dist_sq)
+    if not inside:
+        return -result
+    return result
+
+
+def _get_seg_dist_sq(px, py, a, b):
+    x = a[0]
+    y = a[1]
+    dx = b[0] - x
+    dy = b[1] - y
+
+    if dx != 0 or dy != 0:
+        t = ((px - x) * dx + (py - y) * dy) / (dx * dx + dy * dy)
+
+        if t > 1:
+            x = b[0]
+            y = b[1]
+
+        elif t > 0:
+            x += dx * t
+            y += dy * t
+
+    dx = px - x
+    dy = py - y
+
+    return dx * dx + dy * dy
+
+
+class Cell:
+    def __init__(self, x, y, h, polygon):
+        self.h = h
+        self.y = y
+        self.x = x
+        self.d = _point_to_polygon_distance(x, y, polygon)
+        self.max = self.d + self.h * sqrt(2)
+
+    def __lt__(self, other):
+        return self.max < other.max
+
+    def __lte__(self, other):
+        return self.max <= other.max
+
+    def __gt__(self, other):
+        return self.max > other.max
+
+    def __gte__(self, other):
+        return self.max >= other.max
+
+    def __eq__(self, other):
+        return self.max == other.max
+
+
+def _get_centroid_cell(polygon):
+    area = 0
+    x = 0
+    y = 0
+    points = polygon[0]
+    b = points[-1]  # prev
+    for a in points:
+        f = a[0] * b[1] - b[0] * a[1]
+        x += (a[0] + b[0]) * f
+        y += (a[1] + b[1]) * f
+        area += f * 3
+        b = a
+    if area == 0:
+        return Cell(points[0][0], points[0][1], 0, polygon)
+    return Cell(x / area, y / area, 0, polygon)
+
+
+def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
+    # find bounding box
+    first_item = polygon[0][0]
+    min_x = first_item[0]
+    min_y = first_item[1]
+    max_x = first_item[0]
+    max_y = first_item[1]
+    for p in polygon[0]:
+        if p[0] < min_x:
+            min_x = p[0]
+        if p[1] < min_y:
+            min_y = p[1]
+        if p[0] > max_x:
+            max_x = p[0]
+        if p[1] > max_y:
+            max_y = p[1]
+
+    width = max_x - min_x
+    height = max_y - min_y
+    cell_size = min(width, height)
+    h = cell_size / 2.0
+
+    cell_queue = PriorityQueue()
+
+    if cell_size == 0:
+        if with_distance:
+            return [min_x, min_y], None
+        return [min_x, min_y]
+
+    # cover polygon with initial cells
+    x = min_x
+    while x < max_x:
+        y = min_y
+        while y < max_y:
+            c = Cell(x + h, y + h, h, polygon)
+            y += cell_size
+            cell_queue.put((-c.max, time.time(), c))
+        x += cell_size
+
+    best_cell = _get_centroid_cell(polygon)
+
+    bbox_cell = Cell(min_x + width / 2, min_y + height / 2, 0, polygon)
+    if bbox_cell.d > best_cell.d:
+        best_cell = bbox_cell
+
+    num_of_probes = cell_queue.qsize()
+    while not cell_queue.empty():
+        _, __, cell = cell_queue.get()
+
+        if cell.d > best_cell.d:
+            best_cell = cell
+
+            if debug:
+                print('found best {} after {} probes'.format(
+                    round(1e4 * cell.d) / 1e4, num_of_probes))
+
+        if cell.max - best_cell.d <= precision:
+            continue
+
+        h = cell.h / 2
+        c = Cell(cell.x - h, cell.y - h, h, polygon)
+        cell_queue.put((-c.max, time.time(), c))
+        c = Cell(cell.x + h, cell.y - h, h, polygon)
+        cell_queue.put((-c.max, time.time(), c))
+        c = Cell(cell.x - h, cell.y + h, h, polygon)
+        cell_queue.put((-c.max, time.time(), c))
+        c = Cell(cell.x + h, cell.y + h, h, polygon)
+        cell_queue.put((-c.max, time.time(), c))
+        num_of_probes += 4
+
+    if debug:
+        print('num probes: {}'.format(num_of_probes))
+        print('best distance: {}'.format(best_cell.d))
+    if with_distance:
+        return [best_cell.x, best_cell.y], best_cell.d
+    return [best_cell.x, best_cell.y]
+## <<<
+%>\
+<?xml version="1.0" encoding="UTF-8"?>
+<kml
+  xmlns="http://www.opengis.net/kml/2.2"
+  xmlns:gx="http://www.google.com/kml/ext/2.2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+  http://www.opengis.net/kml/2.2
+  http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd
+  http://www.google.com/kml/ext/2.2
+  http://code.google.com/apis/kml/schema/kml22gx.xsd
+  "
+  >
+  <Document id="bbg_plants">
+  <name>BBG plants</name>
+    <LookAt>
+      <longitude>152.9741983906</longitude>
+      <latitude>-27.47773119534686</latitude>
+      <altitude>0</altitude>
+      <heading>0</heading>
+      <tilt>0</tilt>
+      <range>1150</range>
+      <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+    </LookAt>
+    <snippet/>
+    <description><![CDATA[]]></description>
+    <Folder id="FeatureLayer0">
+      <name>plants</name>
+      <snippet/>
+      <description><![CDATA[]]></description>
+% for plt in get_plants_pertinent_to(values):
+<%
+  try:
+    geo_point = plt.geo_point
+  except:
+    geo_point = None
+
+  try:
+    geo_line = plt.geo_line
+    geo_points = geo_line.split()
+    geo_label = geo_points[(len(geo_points) - 1) // 2]
+  except:
+    geo_line = None
+
+  try:
+    geo_shape = plt.geo_shape
+    plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in geo_shape.split()]]]
+    coords = polylabel(plygn, precision=0.01)
+  except:
+    geo_shape = None
+%>
+## would be good to add markers at line junctions and centers of shapes to make everything more uniform
+% if geo_point or geo_line or geo_shape:
+      <Placemark id="ID_${"%05d" % plt.id}">
+        <name>${plt.accession.species_str()}</name>
+        <snippet/>
+        <description>
+        <![CDATA[
+        <p><small>ACCESSION: ${plt}</small></p>
+        <p><small>QUANTITY: ${plt.quantity}</small></p>
+        <p><small>COMMON: ${plt.accession.species.default_vernacular_name or ''}</small></p>
+        <p><small>DISTRIBUTION: ${plt.accession.species.label_distribution or ''}</small></p>
+        <p><small>FAMILY: ${plt.accession.species.genus.family}</small></p>
+        <p>BED: ${plt.location.code} ${plt.location.name or ''}</p>
+        ]]>
+        </description>
+        % if geo_point:
+        <styleUrl>#IconStyle10</styleUrl>
+        <Point>
+          <extrude>0</extrude><altitudeMode>clampToGround</altitudeMode>
+          <coordinates>
+            ${geo_point}
+          </coordinates>
+        </Point>
+        % elif geo_line:
+        <styleUrl>#LineStyle20</styleUrl>
+        <MultiGeometry>
+        % for point in geo_points:
+          <Point>
+            <coordinates>
+              ${point}
+            </coordinates>
+          </Point>
+        % endfor
+          <LineString>
+            <extrude>1</extrude>
+            <altitudeMode>relativeToGround</altitudeMode>
+            <coordinates>
+              ${geo_line}
+            </coordinates>
+          </LineString>
+        </MultiGeometry>
+        % elif geo_shape:
+        <styleUrl>#PolyStyle00</styleUrl>
+        <MultiGeometry>
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0
+            </coordinates>
+          </Point>
+          <Polygon>
+            <extrude>1</extrude>
+            <altitudeMode>relativeToGround</altitudeMode>
+            <outerBoundaryIs>
+              <LinearRing>
+                <coordinates>
+                ## using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
+                  ${geo_shape.replace(',0 ', ',0.2 ')}
+                </coordinates>
+              </LinearRing>
+            </outerBoundaryIs>
+          </Polygon>
+        </MultiGeometry>
+        % endif
+      </Placemark>
+% endif
+% endfor
+    </Folder>
+      <Style id="PolyStyle00">
+        <IconStyle>
+        ## Hide the pushpin, works in Google Earth but not AGOL
+          <scale>0</scale>
+        </IconStyle>
+        <IconStyle>
+          <scale>1.000000</scale>
+          <Icon>
+            <href>
+              http://maps.google.com/mapfiles/ms/micons/green.png
+            </href>
+          </Icon>
+        </IconStyle>
+        <LabelStyle>
+          <color>ff0075d5</color>
+          <colorMode>normal</colorMode>
+          <scale>0.800000</scale>
+        </LabelStyle>
+        <LineStyle>
+          <color>ff00ff00</color>
+          <width>2.000000</width>
+        </LineStyle>
+        <PolyStyle>
+          <color>5000ff00</color>
+          <outline>1</outline>
+        </PolyStyle>
+      </Style>
+      <Style id="IconStyle10">
+        <IconStyle>
+          <scale>1.000000</scale>
+          <Icon>
+            <href>
+              http://maps.google.com/mapfiles/ms/micons/green.png
+            </href>
+          </Icon>
+        </IconStyle>
+        <LabelStyle>
+          <color>ff0075d5</color>
+          <colorMode>normal</colorMode>
+          <scale>0.800000</scale>
+        </LabelStyle>
+      </Style>
+      <Style id="LineStyle20">
+        <IconStyle>
+          <scale>1.000000</scale>
+          <Icon>
+            <href>
+              http://maps.google.com/mapfiles/ms/micons/green.png
+            </href>
+          </Icon>
+        </IconStyle>
+        <LabelStyle>
+          <color>ff0075d5</color>
+          <colorMode>normal</colorMode>
+          <scale>0.800000</scale>
+        </LabelStyle>
+        <LineStyle>
+          <color>ff00a838</color>
+          <width>2.000000</width>
+        </LineStyle>
+      </Style>
+  </Document>
+</kml>

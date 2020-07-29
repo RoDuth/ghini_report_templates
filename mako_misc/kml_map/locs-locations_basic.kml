@@ -1,0 +1,72 @@
+## vim:set ft=mako:
+<%!
+from bauble.plugins.report import get_locations_pertinent_to
+%>\
+<?xml version="1.0" encoding="UTF-8"?>
+<kml
+  xmlns="http://www.opengis.net/kml/2.2"
+  xmlns:gx="http://www.google.com/kml/ext/2.2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+  http://www.opengis.net/kml/2.2
+  http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd
+  http://www.google.com/kml/ext/2.2
+  http://code.google.com/apis/kml/schema/kml22gx.xsd
+  "
+  >
+  <Document id="bbg_locs">
+    <name>BBG garden beds</name>
+    <snippet/>
+    <description><![CDATA[]]></description>
+    <Folder id="FeatureLayer0">
+      <name>BBG garden beds</name>
+      <snippet/>
+      <description><![CDATA[]]></description>
+%for loc in get_locations_pertinent_to(values):
+<%
+    description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+    description = '' if description == 'None' else description.strip()
+    if polygon != '':
+      polygon = polygon[1:-2]
+%>\
+      <Placemark id="ID_${"%05d" % loc.id}">
+        <name/>
+        <snippet/>
+        <description>
+        <![CDATA[
+        <p><small>${loc.code}</small></p>
+        <h3>${loc.name}</h3>
+        <p>${description}</p>
+        ]]>
+        </description>
+        <styleUrl>#PolyStyle00</styleUrl>
+        <Polygon>
+          <extrude>0</extrude>
+          <altitudeMode>clampToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>
+                ${polygon}
+              </coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </Placemark>
+% endfor
+    </Folder>
+    <Style id="PolyStyle00">
+      <LabelStyle>
+        <color>00000000</color>
+        <scale>0.000000</scale>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffffb200</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ffb200</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+  </Document>
+</kml>

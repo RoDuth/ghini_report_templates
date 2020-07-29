@@ -1,0 +1,55 @@
+## vim:set ft=mako:
+<%!
+from bauble import db
+from bauble.plugins.plants import Species, Genus, Family
+from bauble.plugins.garden import Accession, Plant
+session = db.Session()
+%>\
+list_name,name,label,garden_code_prefix,include,taxon
+<%
+all_sp = session.query(Species).join(Genus).order_by(Genus.genus).order_by(Species.sp).all()
+%>\
+% for sp in all_sp:
+species_list, "${str(sp.str(remove_zws=True)).replace("'", "`")}", "${sp.str(remove_zws=True)}",,"inc"
+% endfor
+species_list,new_species,New Species,,inc
+
+<%
+all_fam = session.query(Family).order_by(Family.family).all()
+%>\
+% for fam in all_fam:
+family_list, "${fam.family}", "${fam.family}",,inc
+% endfor
+family_list,new_family,New Family,,inc
+
+<%
+all_gen = session.query(Genus).order_by(Genus.genus).all()
+%>\
+% for gen in all_gen:
+genus_list, "${gen.genus}", "${gen.genus}",,,"${gen.family}"
+% endfor
+genus_list,new_genus,New Genus,,inc
+
+<%!
+all_acc = session.query(Accession).all()
+%>\
+% for acc in all_acc:
+acc_list, "${acc.code}", "${acc.code} ${acc.species.str(remove_zws=True)}",,,"${str(acc.species.str(remove_zws=True)).replace("'", "`")}"
+% endfor
+acc_list,new_acc,New Accession,,inc
+
+<%!
+all_plt = session.query(Plant).all()
+%>\
+% for plt in all_plt:
+<%
+  geo = [n.category for n in plt.notes if n.category in ['<geo_point>', '<geo_line>', '<geo_shape>']]
+  if geo:
+    geo = ' *' + geo[0][5]
+  else:
+    geo = ''
+%>\
+plant_list, "${plt.__str__()}", "${plt.accession.species_str()} #${plt.__str__()}  [${plt.location.code}]${geo}", "${plt.location.code[:2]}"
+% endfor
+plant_list,new_plant,New Plant,NEW,inc
+<% session.close() %>\

@@ -1,0 +1,22 @@
+## vim:set ft=mako:
+geo_type,Point,Point
+geo_type,Line,Line
+geo_type,Shape,Shape
+
+<%!
+import re
+from bauble import db
+from bauble.plugins.garden import Location
+session = db.Session()
+locs = session.query(Location).order_by(Location.code).all()
+areas = set()
+%>\
+% for loc in locs:
+garden_code,${loc.code},${loc.code}
+<% areas.add(re.match("^[a-zA-z]*", loc.code).group()) %>\
+% endfor
+% for area in sorted(areas):
+garden_code,${area}NEW,Add new bed to ${area}
+% endfor
+garden_code,NEWNEW,Add new location
+<% session.close() %>\
