@@ -182,7 +182,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
 ## <<<
 
 def get_icon_url(plant):
-    root = ''
+    root = 'https://raw.githubusercontent.com/RoDuth/ghini_report_templates/master/mako_misc/kml_map/map_icons/'
     tree1 = 'tree.png'
     tree2 = 'arbol.png'
     palm = 'palm-tree.png'
