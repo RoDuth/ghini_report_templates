@@ -319,7 +319,7 @@ def get_icon_url(plant):
         <snippet/>
         <description>
         <![CDATA[
-        <h2>${plt.accession.species_str(authors=True, markup=True)}</h2>
+        <h2>${plt.accession.species_str(markup=True)}</h2>
         <p><small>ACCESSION: ${plt}</small></p>
         <p><small>QUANTITY: ${plt.quantity}</small></p>
         <p><small>COMMON: ${plt.accession.species.default_vernacular_name or ''}</small></p>
@@ -408,6 +408,9 @@ def get_icon_url(plant):
 % endfor
     </Folder>
       <Style id="PolyStyle00">
+        <BalloonStyle>
+          <text>$[description]</text>
+        </BalloonStyle>
         <IconStyle>
           <scale>1.000000</scale>
         </IconStyle>
@@ -440,6 +443,9 @@ def get_icon_url(plant):
         </LabelStyle>
       </Style>
       <Style id="LineStyle20">
+        <BalloonStyle>
+          <text>$[description]</text>
+        </BalloonStyle>
         <IconStyle>
           <scale>1.000000</scale>
         </IconStyle>
