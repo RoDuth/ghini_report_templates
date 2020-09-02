@@ -329,7 +329,7 @@ def get_icon_url(plant):
         ]]>
         </description>
         % if geo_point:
-        <styleUrl>#IconStyle10</styleUrl>
+        <styleUrl>#GeoPoint</styleUrl>
         <Style>
           <IconStyle>
             <Icon>
@@ -346,7 +346,7 @@ def get_icon_url(plant):
           </coordinates>
         </Point>
         % elif geo_line:
-        <styleUrl>#LineStyle20</styleUrl>
+        <styleUrl>#GeoLine</styleUrl>
         <Style>
           <IconStyle>
             <Icon>
@@ -373,7 +373,7 @@ def get_icon_url(plant):
           </LineString>
         </MultiGeometry>
         % elif geo_shape:
-        <styleUrl>#PolyStyle00</styleUrl>
+        <styleUrl>#GeoShape</styleUrl>
         <Style>
           <IconStyle>
             <Icon>
@@ -407,9 +407,10 @@ def get_icon_url(plant):
 % endif
 % endfor
     </Folder>
-      <Style id="PolyStyle00">
+      <Style id="GeoShape">
         <BalloonStyle>
-          <text>$[description]</text>
+          <text><font face="Arial">$[description]</font></text>
+          ## <text>$[description]</text>
         </BalloonStyle>
         <IconStyle>
           <scale>1.000000</scale>
@@ -429,9 +430,10 @@ def get_icon_url(plant):
           <outline>1</outline>
         </PolyStyle>
       </Style>
-      <Style id="IconStyle10">
+      <Style id="GeoPoint">
         <BalloonStyle>
-          <text>$[description]</text>
+          <text><font face="Arial">$[description]</font></text>
+          ## <text>$[description]</text>
         </BalloonStyle>
         <IconStyle>
           <scale>1.000000</scale>
@@ -442,9 +444,10 @@ def get_icon_url(plant):
           <scale>0.800000</scale>
         </LabelStyle>
       </Style>
-      <Style id="LineStyle20">
+      <Style id="GeoLine">
         <BalloonStyle>
-          <text>$[description]</text>
+          <text><font face="Arial">$[description]</font></text>
+          ## <text>$[description]</text>
         </BalloonStyle>
         <IconStyle>
           <scale>1.000000</scale>

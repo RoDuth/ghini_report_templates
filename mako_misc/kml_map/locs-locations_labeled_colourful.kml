@@ -256,7 +256,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         <snippet/>
         <description>
         <![CDATA[
-        <h3>${loc.name}</h3>
+        <h3>${loc.name or ''}</h3>
         <p>${description}</p>
         ]]>
         </description>
@@ -284,6 +284,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
 % endfor
     </Folder>
     <Style id="PolyStyle00">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -302,6 +306,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </PolyStyle>
     </Style>
     <Style id="PolyStyle01">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -320,6 +328,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </PolyStyle>
     </Style>
     <Style id="PolyStyle02">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -338,6 +350,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </PolyStyle>
     </Style>
     <Style id="PolyStyle03">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -356,6 +372,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </PolyStyle>
     </Style>
     <Style id="PolyStyle04">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -374,6 +394,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </PolyStyle>
     </Style>
     <Style id="PolyStyle05">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
       <IconStyle>
       ## Hide the pushpin, works in Google Earth but not AGOL
         <scale>0</scale>
@@ -391,24 +415,5 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         <outline>1</outline>
       </PolyStyle>
     </Style>
-    ## ORIGNINALY Note: colours are ABGR not RBGA as I'd exoected
-    ## <Style id="PolyStyle00">
-    ##   <IconStyle>
-    ##     <!-- Hide the pushpin -->
-    ##     <scale>0</scale>
-    ##   </IconStyle>
-    ##   <LabelStyle>
-    ##     <color>ffffff00</color>
-    ##     <colorMode>normal</colorMode>
-    ##   </LabelStyle>
-    ##   <LineStyle>
-    ##     <color>ffffb200</color>
-    ##     <width>2.000000</width>
-    ##   </LineStyle>
-    ##   <PolyStyle>
-    ##     <color>30ffb200</color>
-    ##     <outline>1</outline>
-    ##   </PolyStyle>
-    ## </Style>
   </Document>
 </kml>
