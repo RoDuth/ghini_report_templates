@@ -1,6 +1,13 @@
 ## vim:set ft=mako:
+## OPTION title: (type: string, default: 'Plants Search', tooltip: 'the title')
+## OPTION authors: (type: boolean, default: 'false', tooltip: 'if true or 1 include species authorship in the baloon text, if available')
+##  Unimplimented ## OPTION folder_1: (type: string, default: 'None', tooltip: 'options include "bed", "family", "genus"')
+##  Unimplimented ## OPTION folder_2: (type: string, default: 'None', tooltip: 'options include "bed", "family", "genus"')
 <%!
-from bauble.plugins.report import get_plants_pertinent_to
+from datetime import datetime
+from bauble.plugins.report import get_plants_pertinent_to, options
+from bauble import gui
+from bauble.utils import xml_safe
 ## from https://github.com/Twista/python-polylabel
 ## >>>
 from math import sqrt
@@ -221,7 +228,7 @@ def get_icon_url(plant):
   "
   >
   <Document id="bbg_plants">
-  <name>BBG plants</name>
+  <name>${options.get('title')}</name>
     <LookAt>
     ## make an educated guess for LookAt
 <%
@@ -284,11 +291,24 @@ def get_icon_url(plant):
       <heading>0</heading>
       <tilt>0</tilt>
       <range>${rang}</range>
-      <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+      <altitudeMode>absolute</altitudeMode>
     </LookAt>
-    <snippet/>
-    <description><![CDATA[]]></description>
-    <Folder id="FeatureLayer0">
+    <snippet>generated in ghini.desktop ${datetime.now().replace(microsecond=0)}</snippet>
+    <description><![CDATA[
+    <table width='350px'>
+      <tr>
+        <td>search string used:</td>
+      </tr>
+      <tr>
+        <td>
+          <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
+            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+          </code>
+        </td>
+      </tr>
+    </table>
+    ]]></description>
+    <Folder>
       <name>plants</name>
       <snippet/>
       <description><![CDATA[]]></description>
@@ -319,13 +339,44 @@ def get_icon_url(plant):
         <snippet/>
         <description>
         <![CDATA[
-        <h2>${plt.accession.species_str(markup=True)}</h2>
-        <p><small>ACCESSION: ${plt}</small></p>
-        <p><small>QUANTITY: ${plt.quantity}</small></p>
-        <p><small>COMMON: ${plt.accession.species.default_vernacular_name or ''}</small></p>
-        <p><small>DISTRIBUTION: ${plt.accession.species.label_distribution or ''}</small></p>
-        <p><small>FAMILY: ${plt.accession.species.genus.family}</small></p>
-        <p>BED: ${plt.location.code} ${plt.location.name or ''}</p>
+        <h2>${plt.accession.species_str(authors=(options.get('authors').lower() in ['true', '0']), markup=True)}</h2>
+        <table>
+          <tr>
+            <td>ACCESSION:</td>
+            <td>${plt}</td>
+          </tr>
+          <tr>
+            <td>QUANTITY:</td>
+            <td>${plt.quantity}</td>
+          </tr>
+          % if plt.accession.species.default_vernacular_name:
+          <tr>
+            <td>COMMON:</td>
+            <td>${plt.accession.species.default_vernacular_name}</td>
+          </tr>
+          % endif
+          % if plt.accession.species.label_distribution:
+          <tr>
+            <td>DISTRIBUTION:</td>
+            <td>${plt.accession.species.label_distribution}</td>
+          </tr>
+          % endif
+          <tr>
+            <td>FAMILY:</td>
+            <td>${plt.accession.species.genus.family}</td>
+          </tr>
+          <tr>
+            <td>BED:</td>
+            <td>${plt.location.code} ${plt.location.name or ''}</td>
+          </tr>
+        </table>
+
+        ## <p><small>ACCESSION: ${plt}</small></p>
+        ## <p><small>QUANTITY: ${plt.quantity}</small></p>
+        ## <p><small>COMMON: ${plt.accession.species.default_vernacular_name or ''}</small></p>
+        ## <p><small>DISTRIBUTION: ${plt.accession.species.label_distribution or ''}</small></p>
+        ## <p><small>FAMILY: ${plt.accession.species.genus.family}</small></p>
+        ## <p>BED: ${plt.location.code} ${plt.location.name or ''}</p>
         ]]>
         </description>
         % if geo_point:
