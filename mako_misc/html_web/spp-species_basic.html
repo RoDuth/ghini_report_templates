@@ -1,4 +1,6 @@
 ## vim: set filetype=mako:
+## OPTION authors: (type: boolean, default: 'false', tooltip: 'if "true" include species authorship if available')
+## OPTION markup: (type: boolean, default: 'true', tooltip: 'if "true" format the name with italics where appropriate')
 <!DOCTYPE html>
 <html>
 <head>
@@ -13,10 +15,11 @@
 </style>
 <body>
   <%
-    from bauble.plugins.report import get_species_pertinent_to
+    from bauble.plugins.report import get_species_pertinent_to, options
   %>
+  <p>${len(values)}</p>
   % for sp in get_species_pertinent_to(values):
-    <p class="value">${sp.str(authors=True, markup=True)}</p>
+    <p class="value">${sp.str(authors=options.get('authors')=='true', markup=options.get('markup')=='true')}</p>
     ## <p class="value">${sp.markup()}</p>
   % endfor
 </body>

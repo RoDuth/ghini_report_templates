@@ -1,6 +1,6 @@
 ## vim: set filetype=mako:
 ## use this from a search that returns locations
-Code,Name,Description,Plants
+Code,Name,Description
 ##
 % for value in values:
 "${value.code}","${value.name}","${value.description}"

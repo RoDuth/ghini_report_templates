@@ -14,6 +14,10 @@
 
 <body>
   % for value in values:
-  <p class="value">${value}</p>
+    % if type(value).__name__ == "Species":
+      <p class="value">${value.str(markup=True)}</p>
+    % else:
+      <p class="value">${value}</p>
+    % endif
   % endfor
 </body>

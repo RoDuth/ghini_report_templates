@@ -1,0 +1,39 @@
+## vim: set filetype=mako:
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Values</title>
+  <meta charset="UTF-8">
+
+<style type="text/css" media="all">
+  .type {
+    font-family: Arial,sans-serif;
+    font-weight: bold;
+    margin: 0.5ex;
+  }
+  .value {
+    font-family: Arial,sans-serif;
+    margin: 0.5ex;
+  }
+  code {
+    background-color: #eee;
+    border-radius: 3px;
+    padding: 3px 6px;
+  }
+</style>
+
+<body>
+  <%
+    from bauble import gui
+    from bauble.utils import xml_safe
+  %>
+  <p><span class="type">Search String: </span><code>${xml_safe(gui.widgets.main_comboentry.child.get_text())}</code>
+  <table>
+    % for value in values:
+    <tr>
+      <td class="type">${type(value).__name__}</td>
+      <td class="value">${xml_safe(value)}</td>
+    </tr>
+    % endfor
+  </table>
+</body>
