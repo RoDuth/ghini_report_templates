@@ -192,7 +192,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   http://code.google.com/apis/kml/schema/kml22gx.xsd
   "
   >
-  <Document id="bbg_locs">
+  <Document id="BBG_Locations">
     <name>BBG garden beds</name>
     <snippet/>
     <LookAt>
@@ -234,10 +234,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
     </LookAt>
     <description><![CDATA[]]></description>
-    <Folder id="FeatureLayer0">
-      <name>beds</name>
-      <snippet/>
-      <description><![CDATA[]]></description>
       ## TODO what to do if we have no coords?  or even if we only have a single point or something?
 %for style, loc in enumerate(get_locations_pertinent_to(values)):
 <%
@@ -246,7 +242,8 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       continue
     description = '' if description == 'None' else description.strip()
     if polygon != '':
-      polygon = polygon[1:-2]
+      polygon = polygon[1:-2] + ' '
+      ## this takes the kml string and splits it into a list of lists of x,y coords (and drops the above ground value)
       plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
       coords = polylabel(plygn, precision=0.0001)
     polystyle = style % 6
@@ -262,13 +259,9 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         </description>
         <styleUrl>#PolyStyle0${polystyle}</styleUrl>
         <MultiGeometry>
-          <Point>
-            <coordinates>
-              ${coords[0]},${coords[1]},0
-            </coordinates>
-          </Point>
           <Polygon>
             <extrude>1</extrude>
+            <tessellate>1</tessellate>
             <altitudeMode>relativeToGround</altitudeMode>
             <outerBoundaryIs>
               <LinearRing>
@@ -279,10 +272,14 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
               </LinearRing>
             </outerBoundaryIs>
           </Polygon>
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0
+            </coordinates>
+          </Point>
         </MultiGeometry>
       </Placemark>
 % endfor
-    </Folder>
     <Style id="PolyStyle00">
       <BalloonStyle>
       <text><font face="Arial">$[description]</font></text>
