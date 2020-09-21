@@ -17,7 +17,6 @@
   <%
     from bauble.plugins.report import get_species_pertinent_to, options
   %>
-  <p>${len(values)}</p>
   % for sp in get_species_pertinent_to(values):
     <p class="value">${sp.str(authors=options.get('authors')=='true', markup=options.get('markup')=='true')}</p>
     ## <p class="value">${sp.markup()}</p>
