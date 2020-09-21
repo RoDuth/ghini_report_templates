@@ -1,0 +1,138 @@
+## vim:set ft=mako:
+<%!
+from bauble.plugins.report import get_plants_pertinent_to
+%>\
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+	<name>BBG plants</name>
+	<open>1</open>
+	<StyleMap id="geoshape">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#gs_norm</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#gs_hl</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="geoline">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#gl_norm</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#gl_hl</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Style id="gs_norm">
+		<LineStyle>
+			<color>ff00ffff</color>
+		</LineStyle>
+		<PolyStyle>
+			<color>ff00ffff</color>
+		</PolyStyle>
+	</Style>
+	<Style id="gs_hl">
+		<LineStyle>
+			<color>ff00ffff</color>
+			<width>3</width>
+		</LineStyle>
+		<PolyStyle>
+			<color>ff00ffff</color>
+		</PolyStyle>
+	</Style>
+	<Style id="gl_norm">
+		<BalloonStyle>
+		</BalloonStyle>
+		<LineStyle>
+			<color>ff00ffff</color>
+			<width>6</width>
+		</LineStyle>
+	</Style>
+	<Style id="gl_hl">
+		<IconStyle>
+			<scale>1.2</scale>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+		<LineStyle>
+			<color>ff00ffff</color>
+			<width>9</width>
+		</LineStyle>
+	</Style>
+% for plt in get_plants_pertinent_to(values):
+<%
+  try:
+    geo_point = plt.geo_point
+  except:
+    geo_point = None
+
+  try:
+    geo_line = plt.geo_line
+  except:
+    geo_line = None
+
+  try:
+    geo_shape = plt.geo_shape
+  except:
+    geo_shape = None
+%>
+% if geo_point or geo_line or geo_shape:
+      <Placemark id="ID_${"%05d" % plt.id}">
+        <name>${plt.accession.species_str()}</name>
+        <snippet/>
+        <description>
+        <![CDATA[
+        <h2>${plt.accession.species_str(markup=True)}</h2>
+        <table>
+          <tr>
+            <td>ACCESSION:</td>
+            <td>${plt}</td>
+          </tr>
+          <tr>
+            <td>QUANTITY:</td>
+            <td>${plt.quantity}</td>
+          </tr>
+        </table>
+        ]]>
+        </description>
+        % if geo_point:
+        <Point>
+          <extrude>1</extrude>
+          <altitudeMode>clampToGround</altitudeMode>
+          <coordinates>
+            ${geo_point}
+          </coordinates>
+        </Point>
+        % elif geo_line:
+        <styleUrl>#geoline</styleUrl>
+        <LineString>
+          <extrude>1</extrude>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <coordinates>
+            ${geo_line}
+          </coordinates>
+        </LineString>
+        % elif geo_shape:
+        <styleUrl>#geoshape</styleUrl>
+        <Polygon>
+          <extrude>1</extrude>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>
+              ## using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
+                ${geo_shape.replace(',0 ', ',0.2 ')}
+              </coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+        % endif
+      </Placemark>
+% endif
+% endfor
+  </Document>
+</kml>
