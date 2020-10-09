@@ -1,0 +1,13 @@
+## vim:set ft=mako:
+<%!
+from bauble import db
+from bauble.plugins.plants import Species, Genus
+session = db.Session()
+%>\
+SPECIES
+<%
+all_sp = session.query(Species).join(Genus).order_by(Genus.genus).order_by(Species.sp).all()
+%>\
+% for sp in all_sp:
+"${sp.str(remove_zws=True)}"
+% endfor
