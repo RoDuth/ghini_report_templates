@@ -192,7 +192,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   http://code.google.com/apis/kml/schema/kml22gx.xsd
   "
   >
-  <Document id="bbg_plants">
+  <Document id="BBG_Plants">
   <name>BBG plants</name>
     <LookAt>
       <longitude>152.9741983906</longitude>
@@ -205,10 +205,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
     </LookAt>
     <snippet/>
     <description><![CDATA[]]></description>
-    <Folder id="FeatureLayer0">
-      <name>plants</name>
-      <snippet/>
-      <description><![CDATA[]]></description>
 % for plt in get_plants_pertinent_to(values):
 <%
   try:
@@ -248,7 +244,8 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         % if geo_point:
         <styleUrl>#IconStyle10</styleUrl>
         <Point>
-          <extrude>0</extrude><altitudeMode>clampToGround</altitudeMode>
+          <extrude>1</extrude>
+          <altitudeMode>clampToGround</altitudeMode>
           <coordinates>
             ${geo_point}
           </coordinates>
@@ -296,7 +293,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       </Placemark>
 % endif
 % endfor
-    </Folder>
       <Style id="PolyStyle00">
         <IconStyle>
         ## Hide the pushpin, works in Google Earth but not AGOL
