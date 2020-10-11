@@ -1,8 +1,15 @@
-## vim:set ft=mako:
+## vim: ft=mako:fdm=marker
+## OPTION bed_map_title: (type: string, default: 'Garden Beds', tooltip: 'the map title')
+## OPTION area_folders: (type: boolean, default: 'false', tooltip: 'if true or 1 split the areas up into folders of overall areas codes')
+## OPTION multicoloured_beds: (type: boolean, default: 'false', tooltip: 'if true or 1 cycle through colours for bed ')
 <%!
-from bauble.plugins.report import get_locations_pertinent_to
+import re
+from datetime import datetime
+from bauble.plugins.report import get_locations_pertinent_to, options
+from bauble import gui
+from bauble.utils import xml_safe
 ## from https://github.com/Twista/python-polylabel
-## >>>
+## {{{
 from math import sqrt
 import time
 
@@ -178,7 +185,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
     if with_distance:
         return [best_cell.x, best_cell.y], best_cell.d
     return [best_cell.x, best_cell.y]
-## <<<
+## }}}
 %>\
 <?xml version="1.0" encoding="UTF-8"?>
 <kml
@@ -193,9 +200,10 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   "
   >
   <Document id="bbg_locs">
-    <name>BBG garden beds</name>
+    <name>${options.get('bed_map_title')}</name>
     <snippet/>
     <LookAt>
+    ## make an educated guess for LookAt
 <%
   extents = {
     'max_x': -180,
@@ -206,8 +214,8 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
 
   lng = lat = 0
 
-  for loc in get_locations_pertinent_to(values):
-    _, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+  for l in get_locations_pertinent_to(values):
+    _, _, polygon = str(l.description).partition("\n\n{'polygon': ")
     if not polygon:
       continue
     if polygon != '':
@@ -233,13 +241,38 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       <range>${rang}</range>
       <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
     </LookAt>
-    <description><![CDATA[]]></description>
-    <Folder id="FeatureLayer0">
-      <name>beds</name>
-      <snippet/>
-      <description><![CDATA[]]></description>
+    <snippet>generated in ghini.desktop ${datetime.now().replace(microsecond=0)}</snippet>
+    <description><![CDATA[
+    <table width='350px'>
+      <tr>
+        <td>search string used:</td>
+      </tr>
+      <tr>
+        <td>
+          <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
+            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+          </code>
+        </td>
+      </tr>
+    </table>
+    ]]></description>
       ## TODO what to do if we have no coords?  or even if we only have a single point or something?
-%for loc in get_locations_pertinent_to(values):
+<%
+  area = None
+  last_area = None
+  location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
+%>\
+
+
+
+## TODO THIS IS BIG!!!
+## Why do we end up with 2 entries sometimes???  Seems like the first location of an area and the last are getting
+## Tangled up some how.  I.e. The first entry takes on the last one's polygon, code and id.
+## Seems its something to do with the repeated use of the polygon and loc
+
+
+
+% for style, loc in enumerate(location_list):
 <%
     description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
     if not polygon:
@@ -249,7 +282,65 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       polygon = polygon[1:-2]
       plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
       coords = polylabel(plygn, precision=0.0001)
+    polystyle = style % 6
+    ## grab the overall area code
+    pat = re.compile('([A-za-z]+)\d+')
+    match = pat.match(loc.code)
+    if match:
+      current_area = match.group(1)
 %>\
+% if options.get('area_folders').lower() in ['true', '1'] and current_area != area:
+    % if last_area:
+    </Folder>
+    % endif
+    <Folder id="${current_area}">
+      <name>${current_area}</name>
+      <LookAt>
+      ## make an educated guess for LookAt
+<%
+  extents = {
+    'max_x': -180,
+    'min_x': 180,
+    'max_y': -180,
+    'min_y': 180,
+  }
+
+  lng = lat = 0
+
+  area_location_list = [i for i in get_locations_pertinent_to(values) if i.code.startswith(current_area)]
+
+  for l in area_location_list:
+    _, _, p = str(l.description).partition("\n\n{'polygon': ")
+    if not p:
+      continue
+    if p != '':
+      p = p[1:-2]
+      plygn = [[float(x), float(y)] for x, y, _ in [s.split(',') for s in p.split()]]
+      x_vals = [x for x, y in plygn]
+      y_vals = [y for x, y in plygn]
+      extents['max_x'] = max(x_vals + [extents.get('max_x')])
+      extents['min_x'] = min(x_vals + [extents.get('min_x')])
+      extents['max_y'] = max(y_vals + [extents.get('max_y')])
+      extents['min_y'] = min(y_vals + [extents.get('min_y')])
+      lng = (extents.get('max_x') + extents.get('min_x')) / 2
+      lat = (extents.get('max_y') + extents.get('min_y')) / 2
+      rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
+      rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
+      rang = max([rang, rang2])
+
+  area = current_area
+  last_area = area
+
+%>\
+        <longitude>${lng}</longitude>
+        <latitude>${lat}</latitude>
+        <altitude>0</altitude>
+        <heading>0</heading>
+        <tilt>0</tilt>
+        <range>${rang}</range>
+        <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+      </LookAt>
+% endif
       <Placemark id="ID_${"%05d" % loc.id}">
         <name>${loc.code}</name>
         <snippet/>
@@ -259,7 +350,11 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         <p>${description}</p>
         ]]>
         </description>
+% if options.get('multicoloured_beds').lower() in ['true', '1']:
+        <styleUrl>#PolyStyle0${polystyle}</styleUrl>
+% else:
         <styleUrl>#PolyStyle00</styleUrl>
+% endif
         <MultiGeometry>
           <Point>
             <coordinates>
@@ -281,7 +376,143 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         </MultiGeometry>
       </Placemark>
 % endfor
+% if options.get('area_folders').lower() in ['true', '1']:
     </Folder>
+% endif
+% if options.get('multicoloured_beds').lower() in ['true', '1']:
+    <Style id="PolyStyle00">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>300000ff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle01">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff00ff00</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>3000ff00</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle02">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffff0000</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ff0000</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle03">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff00ffff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>3000ffff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle04">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffffff00</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ffff00</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle05">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffff00ff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ff00ff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+% else:
     <Style id="PolyStyle00">
       <BalloonStyle>
       <text><font face="Arial">$[description]</font></text>
@@ -304,5 +535,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         <outline>1</outline>
       </PolyStyle>
     </Style>
+% endif
   </Document>
 </kml>

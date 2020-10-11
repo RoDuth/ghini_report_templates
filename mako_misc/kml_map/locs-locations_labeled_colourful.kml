@@ -1,8 +1,12 @@
-## vim:set ft=mako:
+## vim: ft=mako:fdm=marker
+## OPTION title: (type: string, default: 'Garden Beds', tooltip: 'the title')
 <%!
-from bauble.plugins.report import get_locations_pertinent_to
+from datetime import datetime
+from bauble.plugins.report import get_locations_pertinent_to, options
+from bauble import gui
+from bauble.utils import xml_safe
 ## from https://github.com/Twista/python-polylabel
-## >>>
+## {{{
 from math import sqrt
 import time
 
@@ -178,7 +182,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
     if with_distance:
         return [best_cell.x, best_cell.y], best_cell.d
     return [best_cell.x, best_cell.y]
-## <<<
+## }}}
 %>\
 <?xml version="1.0" encoding="UTF-8"?>
 <kml
@@ -193,7 +197,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   "
   >
   <Document id="BBG_Locations">
-    <name>BBG garden beds</name>
+    <name>${options.get('title')}</name>
     <snippet/>
     <LookAt>
 <%
@@ -233,7 +237,21 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       <range>${rang}</range>
       <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
     </LookAt>
-    <description><![CDATA[]]></description>
+    <snippet>generated in ghini.desktop ${datetime.now().replace(microsecond=0)}</snippet>
+    <description><![CDATA[
+    <table width='350px'>
+      <tr>
+        <td>search string used:</td>
+      </tr>
+      <tr>
+        <td>
+          <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
+            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+          </code>
+        </td>
+      </tr>
+    </table>
+    ]]></description>
       ## TODO what to do if we have no coords?  or even if we only have a single point or something?
 %for style, loc in enumerate(get_locations_pertinent_to(values)):
 <%
