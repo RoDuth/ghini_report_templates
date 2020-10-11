@@ -262,16 +262,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   last_area = None
   location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
 %>\
-
-
-
-## TODO THIS IS BIG!!!
-## Why do we end up with 2 entries sometimes???  Seems like the first location of an area and the last are getting
-## Tangled up some how.  I.e. The first entry takes on the last one's polygon, code and id.
-## Seems its something to do with the repeated use of the polygon and loc
-
-
-
 % for style, loc in enumerate(location_list):
 <%
     description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
