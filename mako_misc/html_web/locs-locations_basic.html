@@ -13,8 +13,11 @@
 </style>
 
 <body>
-  <% from bauble.plugins.report import get_locations_pertinent_to %>
-  % for l in get_locations_pertinent_to(values):
+  <%
+    from bauble.plugins.report import get_locations_pertinent_to
+    location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
+  %>
+  % for l in location_list:
     <p class="value">${l.code or ''}  ${l.name or ''}</p>
   % endfor
 </body>
