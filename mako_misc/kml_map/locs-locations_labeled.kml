@@ -269,7 +269,8 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
       continue
     description = '' if description == 'None' else description.strip()
     if polygon != '':
-      polygon = polygon[1:-2]
+      polygon = polygon[1:-2] + ' '
+      ## take the kml string and splits it into a list of lists of lat,long coords (and drops the altitude)
       plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
       coords = polylabel(plygn, precision=0.0001)
     polystyle = style % 6
