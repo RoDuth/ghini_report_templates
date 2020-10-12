@@ -1,15 +1,16 @@
-## vim:set ft=mako:
+## vim: ft=mako:fdm=marker
 ## OPTION title: (type: string, default: 'Plants Search', tooltip: 'the title')
 ## OPTION authors: (type: boolean, default: 'false', tooltip: 'if true or 1 include species authorship in the baloon text, if available')
-##  Unimplimented ## OPTION folder_1: (type: string, default: 'None', tooltip: 'options include "bed", "family", "genus"')
-##  Unimplimented ## OPTION folder_2: (type: string, default: 'None', tooltip: 'options include "bed", "family", "genus"')
+## OPTION snip_acc: (type: boolean, default: 'false', tooltip: 'if true or 1 include accession code in places snippet')
+## OPTION folder_sort_order: (type: string, default: 'None', tooltip: 'sort into folders, options are: loc, fam, gen, acc, None')
+##  start with loc, fam, gen, acc, in future could add, loc-fam, fam-gen, etc. later
 <%!
 from datetime import datetime
 from bauble.plugins.report import get_plants_pertinent_to, options
 from bauble import gui
 from bauble.utils import xml_safe
 ## from https://github.com/Twista/python-polylabel
-## >>>
+## {{{
 from math import sqrt
 import time
 
@@ -186,7 +187,7 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
         return [best_cell.x, best_cell.y], best_cell.d
     return [best_cell.x, best_cell.y]
 
-## <<<
+## }}}
 
 def get_icon_url(plant):
     root = 'https://raw.githubusercontent.com/RoDuth/ghini_report_templates/master/mako_misc/kml_map/map_icons/'
@@ -227,8 +228,8 @@ def get_icon_url(plant):
   http://code.google.com/apis/kml/schema/kml22gx.xsd
   "
   >
-  <Document id="bbg_plants">
-  <name>${options.get('title')}</name>
+  <Document id="BBG_Plants">
+    <name>${options.get('title')}</name>
     <LookAt>
     ## make an educated guess for LookAt
 <%
@@ -284,7 +285,7 @@ def get_icon_url(plant):
     rang
   except NameError:
     raise Exception("Can't find anything to map for the current selection")
-%>/
+%>\
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
       <altitude>0</altitude>
@@ -308,11 +309,26 @@ def get_icon_url(plant):
       </tr>
     </table>
     ]]></description>
-    <Folder>
-      <name>plants</name>
-      <snippet/>
-      <description><![CDATA[]]></description>
-% for plt in get_plants_pertinent_to(values):
+<%
+  sorter = None
+  last_sorter = None
+  if options.get('folder_sort_order') == 'loc':
+    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.location.code)
+  elif options.get('folder_sort_order') == 'fam':
+    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.species.genus.family.family)
+  elif options.get('folder_sort_order') == 'gen':
+    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.species.genus.genus)
+  elif options.get('folder_sort_order') == 'acc':
+    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.code)
+  else:
+    plant_list = get_plants_pertinent_to(values)
+
+%>\
+    ## <Folder id="PlantsFolder">
+    ##   <name>plants</name>
+    ##   <snippet/>
+    ##   <description><![CDATA[]]></description>
+% for plt in plant_list:
 <%
   try:
     geo_point = plt.geo_point
@@ -332,18 +348,43 @@ def get_icon_url(plant):
     coords = polylabel(plygn, precision=0.01)
   except:
     geo_shape = None
-%>
+%>\
 % if geo_point or geo_line or geo_shape:
+<%
+  if options.get('folder_sort_order') == 'loc':
+    current_sorter = plt.location.code
+  elif options.get('folder_sort_order') == 'fam':
+    current_sorter = plt.accession.species.genus.family.family
+  elif options.get('folder_sort_order') == 'gen':
+    current_sorter = plt.accession.species.genus.genus
+  elif options.get('folder_sort_order') == 'acc':
+    current_sorter = plt.accession.code
+%>\
+% if options.get('folder_sort_order') in ['loc', 'fam', 'gen', 'acc'] and current_sorter != sorter:
+    % if last_sorter:
+    </Folder>
+    % endif
+    <Folder id="${current_sorter}">
+      <name>${current_sorter}</name>
+<%
+  last_sorter = sorter = current_sorter
+%>\
+% endif
+      ## unique id's are handy for linking to e.g. http://www.myserver.com/mykml.kml#ID_00102
       <Placemark id="ID_${"%05d" % plt.id}">
         <name>${plt.accession.species_str()}</name>
+        % if options.get('snip_acc').lower() in ['true', '1']:
+        <snippet>${xml_safe(plt)}</snippet>
+        % else:
         <snippet/>
+        % endif
         <description>
         <![CDATA[
-        <h2>${plt.accession.species_str(authors=(options.get('authors').lower() in ['true', '0']), markup=True)}</h2>
+        <h2>${plt.accession.species_str(authors=(options.get('authors').lower() in ['true', '1']), markup=True)}</h2>
         <table>
           <tr>
             <td>ACCESSION:</td>
-            <td>${plt}</td>
+            <td>${xml_safe(plt)}</td>
           </tr>
           <tr>
             <td>QUANTITY:</td>
@@ -370,13 +411,6 @@ def get_icon_url(plant):
             <td>${plt.location.code} ${plt.location.name or ''}</td>
           </tr>
         </table>
-
-        ## <p><small>ACCESSION: ${plt}</small></p>
-        ## <p><small>QUANTITY: ${plt.quantity}</small></p>
-        ## <p><small>COMMON: ${plt.accession.species.default_vernacular_name or ''}</small></p>
-        ## <p><small>DISTRIBUTION: ${plt.accession.species.label_distribution or ''}</small></p>
-        ## <p><small>FAMILY: ${plt.accession.species.genus.family}</small></p>
-        ## <p>BED: ${plt.location.code} ${plt.location.name or ''}</p>
         ]]>
         </description>
         % if geo_point:
@@ -391,7 +425,8 @@ def get_icon_url(plant):
           </IconStyle>
         </Style>
         <Point>
-          <extrude>0</extrude><altitudeMode>clampToGround</altitudeMode>
+          <extrude>0</extrude>
+          <altitudeMode>clampToGround</altitudeMode>
           <coordinates>
             ${geo_point}
           </coordinates>
@@ -408,13 +443,6 @@ def get_icon_url(plant):
           </IconStyle>
         </Style>
         <MultiGeometry>
-        % for point in geo_points:
-          <Point>
-            <coordinates>
-              ${point}
-            </coordinates>
-          </Point>
-        % endfor
           <LineString>
             <extrude>1</extrude>
             <altitudeMode>relativeToGround</altitudeMode>
@@ -422,6 +450,13 @@ def get_icon_url(plant):
               ${geo_line}
             </coordinates>
           </LineString>
+        % for point in geo_points:
+          <Point>
+            <coordinates>
+              ${point}
+            </coordinates>
+          </Point>
+        % endfor
         </MultiGeometry>
         % elif geo_shape:
         <styleUrl>#GeoShape</styleUrl>
@@ -435,11 +470,6 @@ def get_icon_url(plant):
           </IconStyle>
         </Style>
         <MultiGeometry>
-          <Point>
-            <coordinates>
-              ${coords[0]},${coords[1]},0
-            </coordinates>
-          </Point>
           <Polygon>
             <extrude>1</extrude>
             <altitudeMode>relativeToGround</altitudeMode>
@@ -452,12 +482,20 @@ def get_icon_url(plant):
               </LinearRing>
             </outerBoundaryIs>
           </Polygon>
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0
+            </coordinates>
+          </Point>
         </MultiGeometry>
         % endif
       </Placemark>
 % endif
 % endfor
+% if options.get('folder_sort_order') in ['loc', 'fam', 'gen', 'acc']:
     </Folder>
+% endif
+    ## </Folder>
       <Style id="GeoShape">
         <BalloonStyle>
           <text><font face="Arial">$[description]</font></text>
