@@ -333,7 +333,6 @@ def get_icon_url(plant):
   try:
     geo_line = plt.geo_line
     geo_points = geo_line.split()
-    geo_label = geo_points[(len(geo_points) - 1) // 2]
   except:
     geo_line = None
 

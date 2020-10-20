@@ -215,7 +215,6 @@ def polylabel(polygon, precision=1.0, debug=False, with_distance=False):
   try:
     geo_line = plt.geo_line
     geo_points = geo_line.split()
-    geo_label = geo_points[(len(geo_points) - 1) // 2]
   except:
     geo_line = None
 
