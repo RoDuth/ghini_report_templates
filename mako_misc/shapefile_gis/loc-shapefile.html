@@ -1,0 +1,75 @@
+## vim: ft=mako:fdm=marker
+## OPTION save_to_dir: (type: string, default: '{tmpdir}', tooltip: 'Directory to save the output, use {tmpdir} for the temp file system, ~ for home.')
+## OPTION save_to_filename: (type: string, default: 'garden_beds', tooltip: 'common filename for the output files excluding the extension')
+## OPTION open_dir_or_file: (type: string, default: 'None', tooltip: 'This template will preduce several files that are all needed togther, this option allows you to choose to open the folder or just the .shp file in the default system app, options are "dir" or "file".  Anything else wont attempt to open anything')
+## TODO need to have the option to break this up into several shapefiles by overall areas
+<%!
+import tempfile
+from os.path import expanduser
+from bauble.plugins.report import get_locations_pertinent_to, options
+import shapefile
+from bauble.utils import desktop
+
+tempdir = tempfile.mkdtemp()
+dirname = expanduser(options.get('save_to_dir').format(tmpdir = tempdir))
+filename = dirname + '/' + options.get('save_to_filename')
+
+# create the PRJ file  TODO need to check this for our situation http://geospatialpython.com/2011/02/create-prj-projection-file-for.html
+with open("{}.prj".format(filename), "w") as prj:
+    epsg = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
+    prj.write(epsg)
+    prj.close()
+
+%>\
+<%
+location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
+
+
+with shapefile.Writer(filename) as shpf:
+    shpf.field('code', 'C', size=24)
+    shpf.field('name', 'C', size=126)
+    shpf.field('description', 'C')
+
+    for loc in location_list:
+        description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+        if not polygon or len(polygon) < 3:
+            continue
+        description = '' if description == 'None' else description.strip()
+        polygon = polygon[1:-2] + ' '
+
+        coords = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
+        records = {
+            'code': loc.code,
+            'name': loc.name,
+            'description': description
+        }
+
+        shpf.record(**records)
+        shpf.poly(coords)
+
+
+if options.get('open_dir_or_file').lower() == 'dir':
+    desktop.open(dirname)
+elif options.get('open_dir_or_file').lower() == 'file':
+    desktop.open('{}.shp'.format(filename))
+
+%>\
+## Notify the user (and provide the location)
+<html>
+<head>
+  <title>Success!</title>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css" media="all">
+  .value {
+    font-family: Arial,sans-serif;
+    margin: 0.5ex;
+  }
+</style>
+
+<body>
+  <h1> Your shapefile should be complete </h1>
+  <p> They are available in <a href="${dirname}/"> this </a> directory on your filesystem (copy the link and paste it into your file manager)</p>
+</body>
+</html>

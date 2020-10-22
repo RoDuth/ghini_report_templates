@@ -1,0 +1,110 @@
+## vim: ft=mako:fdm=marker
+## OPTION save_to_dir: (type: string, default: '{tmpdir}', tooltip: 'Directory to save the output, use {tmpdir} for the temp file system, ~ for home.')
+## OPTION save_to_filenames: (type: string, default: 'plants', tooltip: 'common filename for the output files excluding the extension')
+## OPTION open_dir: (type: string, default: 'True', tooltip: 'This template will preduce several files that are all needed togther, this option allows you to choose to open the folder. To open set to 'true', anything else wont attempt to open anything')
+## TODO the other option could be "single_layer" and it true we would use only one layer of points to make, lines would be broken into there dots and
+## polygons could use the polylabel method to find their centers
+<%!
+import tempfile
+from os.path import expanduser
+from bauble.plugins.report import get_plants_pertinent_to, options
+import shapefile
+from bauble.utils import desktop
+
+tempdir = tempfile.mkdtemp()
+dirname = expanduser(options.get('save_to_dir').format(tmpdir = tempdir))
+filename = dirname + '/' + options.get('save_to_filenames')
+epsg = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
+
+# create the PRJ file  TODO need to check this for our situation http://geospatialpython.com/2011/02/create-prj-projection-file-for.html
+with open("{}_points.prj".format(filename), "w") as pnt_prj, \
+     open("{}_lines.prj".format(filename), "w") as lin_prj, \
+     open("{}_polygons.prj".format(filename), "w") as ply_prj:
+    pnt_prj.write(epsg)
+    lin_prj.write(epsg)
+    ply_prj.write(epsg)
+
+with open("{}_lines.prj".format(filename), "w") as prj:
+    epsg = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
+    prj.write(epsg)
+
+%>\
+<%
+with shapefile.Writer(filename + '_points') as pnts, \
+     shapefile.Writer(filename + '_lines') as lins, \
+     shapefile.Writer(filename + '_polygons')  as plys:
+    # add basic fields to all three files
+    for shp in [pnts, lins, plys]:
+        shp.field('plant', 'C', size=16)
+        shp.field('quantity', 'N')
+        shp.field('family', 'C', size=126)
+        shp.field('species', 'C', size=126)
+        shp.field('bed', 'C', size=126)
+        ## shp.field('source', 'C', size=126)
+
+    for plt in get_plants_pertinent_to(values):
+
+        try:
+            geo_point = plt.geo_point
+            point_coords = map(float, geo_point.split(',')[:2])
+        except:
+            geo_point = None
+
+        try:
+            geo_line = plt.geo_line
+            line_coords = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in geo_line.split()]]]
+        except:
+            geo_line = None
+
+        try:
+            geo_shape = plt.geo_shape
+            geo_shape = geo_shape + ' '
+            poly_coords = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in geo_shape.split()]]]
+        except:
+            geo_shape = None
+
+        if not any([geo_point, geo_line, geo_shape]):
+            continue
+
+        records = {
+          'plant': plt,
+          'quantity': plt.quantity,
+          'family': plt.accession.species.genus.family,
+          'species': plt.accession.species_str(),
+          'bed': plt.location.code,
+        }
+          ## 'source': plt.accession.source.source_detail.name
+        if geo_point:
+            pnts.record(**records)
+            pnts.point(*point_coords)
+        elif geo_line:
+            lins.record(**records)
+            lins.line(line_coords)
+        elif geo_shape:
+            plys.record(**records)
+            plys.poly(poly_coords)
+
+
+if options.get('open_dir').lower() in ['true', '1']:
+    desktop.open(dirname)
+
+%>\
+## Notify the user (and provide the location)
+<html>
+<head>
+  <title>Success!</title>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css" media="all">
+  .value {
+    font-family: Arial,sans-serif;
+    margin: 0.5ex;
+  }
+</style>
+
+<body>
+  <h1> Your shapefile should be complete </h1>
+  <p> They are available in <a href="${dirname}/"> this </a> directory on your filesystem (copy the link and paste it into your file manager)</p>
+</body>
+</html>
