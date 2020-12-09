@@ -106,6 +106,13 @@ def get_icon_url(plant):
     rang
   except NameError:
     raise Exception("Can't find anything to map for the current selection")
+
+  try:
+    # PyGTK
+    search_string = xml_safe(gui.widgets.main_comboentry.child.get_text())
+  except AttributeError:
+    # PyGObject
+    search_string = xml_safe(gui.widgets.main_comboentry.get_child().get_text())
 %>\
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
@@ -124,7 +131,7 @@ def get_icon_url(plant):
       <tr>
         <td>
           <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
-            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+            ${search_string}
           </code>
         </td>
       </tr>

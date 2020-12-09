@@ -55,6 +55,13 @@ from polylabel import polylabel
       rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
       rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
       rang = max([rang, rang2])
+
+  try:
+    # PyGTK
+    search_string = xml_safe(gui.widgets.main_comboentry.child.get_text())
+  except AttributeError:
+    # PyGObject
+    search_string = xml_safe(gui.widgets.main_comboentry.get_child().get_text())
 %>/
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
@@ -73,7 +80,7 @@ from polylabel import polylabel
       <tr>
         <td>
           <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
-            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+            ${search_string}
           </code>
         </td>
       </tr>
