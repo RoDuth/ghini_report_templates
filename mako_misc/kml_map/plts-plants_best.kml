@@ -5,13 +5,15 @@
 ## OPTION folder_sort_order: (type: string, default: 'None', tooltip: 'sort into folders, options are: loc, fam, gen, acc, None')
 <%!
 from datetime import datetime
+from pathlib import Path
+from polylabel import polylabel
 from bauble.plugins.report import get_plants_pertinent_to, options
 from bauble import gui
 from bauble.utils import xml_safe
-from polylabel import polylabel
+from bauble.paths import templates_dir
 
 def get_icon_url(plant):
-    root = 'https://raw.githubusercontent.com/RoDuth/ghini_report_templates/master/mako_misc/kml_map/map_icons/'
+    root = Path(templates_dir(), 'ghini_report_templates-master', 'mako_misc', 'kml_map', 'map_icons')
     tree1 = 'tree.png'
     tree2 = 'arbol.png'
     palm = 'palm-tree.png'
@@ -34,7 +36,16 @@ def get_icon_url(plant):
         'Poaceae': grass,
     }
 
-    return root + family_to_icon.get(str(plant.accession.species.genus.family), tree1)
+    return str(root / family_to_icon.get(str(plant.accession.species.genus.family), tree1))
+
+def json_to_kml_point(coords):
+    return ','.join(str(i) for i in coords + [0])
+
+def json_to_kml_line(coords):
+    return ' '.join(json_to_kml_point(i) for i in coords)
+
+def json_to_kml_poly(coords):
+    return ' '.join(json_to_kml_point(i) for i in coords[0])
 
 %>\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -64,20 +75,14 @@ def get_icon_url(plant):
   lng = lat = 0
 
   for plt in get_plants_pertinent_to(values):
-    try:
-      geo_point = plt.geo_point
-    except:
-      geo_point = ''
-
-    try:
-      geo_line = plt.geo_line
-    except:
-      geo_line = ''
-
-    try:
-      geo_shape = plt.geo_shape
-    except:
-      geo_shape = ''
+    geo_point = geo_line = geo_shape = ''
+    if plt.geojson:
+      if plt.geojson.get('type') == 'Point':
+        geo_point = json_to_kml_point(plt.geojson.get('coordinates'))
+      elif plt.geojson.get('type') == 'LineString':
+        geo_line = json_to_kml_line(plt.geojson.get('coordinates'))
+      elif plt.geojson.get('type') == 'Polygon':
+        geo_shape = json_to_kml_poly(plt.geojson.get('coordinates'))
 
     points = geo_shape + ' ' + geo_line + ' ' + geo_point
     points = points.strip()
@@ -154,25 +159,19 @@ def get_icon_url(plant):
 %>\
 % for plt in plant_list:
 <%
-  try:
-    geo_point = plt.geo_point
-  except:
-    geo_point = None
-
-  try:
-    geo_line = plt.geo_line
-    geo_points = geo_line.split()
-  except:
-    geo_line = None
-
-  try:
-    geo_shape = plt.geo_shape
-    plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in geo_shape.split()]]]
-    coords = polylabel(plygn, precision=0.01)
-    ## add an extra space so that we can replace the last alititude value with a height below (',0 ')
-    geo_shape = geo_shape + ' '
-  except:
-    geo_shape = None
+  geo_point = geo_line = geo_shape = None
+  if plt.geojson:
+    if plt.geojson.get('type') == 'Point':
+      geo_point = json_to_kml_point(plt.geojson.get('coordinates'))
+    elif plt.geojson.get('type') == 'LineString':
+      geo_line = json_to_kml_line(plt.geojson.get('coordinates'))
+      geo_points = geo_line.split()
+    elif plt.geojson.get('type') == 'Polygon':
+      plygn = plt.geojson.get('coordinates')
+      geo_shape = json_to_kml_poly(plygn)
+      pin = polylabel(plygn, precision=0.01)
+      ## add an extra space so that we can replace the last alititude value with a height below (',0 ')
+      geo_shape = geo_shape + ' '
 %>\
 % if geo_point or geo_line or geo_shape:
 <%
@@ -309,7 +308,7 @@ def get_icon_url(plant):
           </Polygon>
           <Point>
             <coordinates>
-              ${coords[0]},${coords[1]},0
+              ${pin[0]},${pin[1]},0
             </coordinates>
           </Point>
         </MultiGeometry>

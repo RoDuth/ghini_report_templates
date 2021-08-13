@@ -65,20 +65,24 @@ from bauble.plugins.report import get_plants_pertinent_to
 	</Style>
 % for plt in get_plants_pertinent_to(values):
 <%
-  try:
-    geo_point = plt.geo_point
-  except:
-    geo_point = None
 
-  try:
-    geo_line = plt.geo_line
-  except:
-    geo_line = None
+def json_to_kml_point(coords):
+    return ','.join(str(i) for i in coords + [0])
 
-  try:
-    geo_shape = plt.geo_shape
-  except:
-    geo_shape = None
+def json_to_kml_line(coords):
+    return ' '.join(json_to_kml_point(i) for i in coords)
+
+def json_to_kml_poly(coords):
+    return ' '.join(json_to_kml_point(i) for i in coords[0])
+
+geo_point = geo_line = geo_shape = None
+if plt.geojson:
+  if plt.geojson.get('type') == 'Point':
+    geo_point = json_to_kml_point(plt.geojson.get('coordinates'))
+  elif plt.geojson.get('type') == 'LineString':
+    geo_line = json_to_kml_line(plt.geojson.get('coordinates'))
+  elif plt.geojson.get('type') == 'Polygon':
+    geo_shape = json_to_kml_poly(plt.geojson.get('coordinates'))
 %>
 % if geo_point or geo_line or geo_shape:
       <Placemark id="ID_${"%05d" % plt.id}">

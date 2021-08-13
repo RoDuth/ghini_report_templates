@@ -9,6 +9,44 @@ from bauble.plugins.report import get_locations_pertinent_to, options
 from bauble import gui
 from bauble.utils import xml_safe
 from polylabel import polylabel
+
+
+def get_look_at(lst):
+
+    extents = {
+      'max_x': -180,
+      'min_x': 180,
+      'max_y': -180,
+      'min_y': 180,
+    }
+
+    lng = lat = 0
+
+    count = 0
+    for loc in lst:
+        polygon = None
+        if loc.geojson and loc.geojson.get('type') == 'Polygon':
+          polygon = loc.geojson.get('coordinates')
+        if not polygon:
+          continue
+        count += 1
+        x_vals = [x for x, y in polygon[0]]
+        y_vals = [y for x, y in polygon[0]]
+        extents['max_x'] = max(x_vals + [extents.get('max_x')])
+        extents['min_x'] = min(x_vals + [extents.get('min_x')])
+        extents['max_y'] = max(y_vals + [extents.get('max_y')])
+        extents['min_y'] = min(y_vals + [extents.get('min_y')])
+
+    if count == 0:
+        return None, None, None
+    lng = (extents.get('max_x') + extents.get('min_x')) / 2
+    lat = (extents.get('max_y') + extents.get('min_y')) / 2
+    rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
+    rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
+    rang =  max([rang, rang2])
+
+    return rang, lat, lng
+
 %>\
 <?xml version="1.0" encoding="UTF-8"?>
 <kml
@@ -28,33 +66,11 @@ from polylabel import polylabel
     <LookAt>
     ## make an educated guess for LookAt
 <%
-  extents = {
-    'max_x': -180,
-    'min_x': 180,
-    'max_y': -180,
-    'min_y': 180,
-  }
 
-  lng = lat = 0
+  rang, lat, lng = get_look_at(get_locations_pertinent_to(values))
 
-  for l in get_locations_pertinent_to(values):
-    _, _, polygon = str(l.description).partition("\n\n{'polygon': ")
-    if not polygon:
-      continue
-    if polygon != '':
-      polygon = polygon[1:-2]
-      plygn = [[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]
-      x_vals = [x for x, y in plygn]
-      y_vals = [y for x, y in plygn]
-      extents['max_x'] = max(x_vals + [extents.get('max_x')])
-      extents['min_x'] = min(x_vals + [extents.get('min_x')])
-      extents['max_y'] = max(y_vals + [extents.get('max_y')])
-      extents['min_y'] = min(y_vals + [extents.get('min_y')])
-      lng = (extents.get('max_x') + extents.get('min_x')) / 2
-      lat = (extents.get('max_y') + extents.get('min_y')) / 2
-      rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
-      rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
-      rang = max([rang, rang2])
+  if not rang:
+    raise Exception("Can't find anything to map for the current selection")
 
   try:
     # PyGTK
@@ -90,19 +106,25 @@ from polylabel import polylabel
 <%
   area = None
   last_area = None
-  location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
+  # NOTE need to reference i.geojson here or it won't be available later (deferred)
+  location_list = sorted([i for i in get_locations_pertinent_to(values) if i.geojson], key=lambda x: x.code)
 %>\
 % for style, loc in enumerate(location_list):
 <%
-    description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+    description = ''
+    if loc.description:
+      description, _, _ = str(loc.description).partition("\n\n{'polygon': ")
+    description = description.strip()
+    polygon = None
+    json = loc.geojson
+    if json and json.get('type') == 'Polygon':
+      polygon = json.get('coordinates')
     if not polygon:
       continue
-    description = '' if description == 'None' else description.strip()
-    if polygon != '':
-      polygon = polygon[1:-2] + ' '
-      ## take the kml string and splits it into a list of lists of lat,long coords (and drops the altitude)
-      plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
-      coords = polylabel(plygn, precision=0.0001)
+    coords = polylabel(polygon, precision=0.0001)
+
+    polygon = ' '.join([str(f'{i[0]},{i[1]},0.2') for i in polygon[0]])
+
     polystyle = style % 6
     ## grab the overall area code
     pat = re.compile('([A-za-z]+)\d+')
@@ -119,35 +141,10 @@ from polylabel import polylabel
       <LookAt>
       ## make an educated guess for LookAt
 <%
-  extents = {
-    'max_x': -180,
-    'min_x': 180,
-    'max_y': -180,
-    'min_y': 180,
-  }
-
-  lng = lat = 0
 
   area_location_list = [i for i in get_locations_pertinent_to(values) if i.code.startswith(current_area)]
 
-  for l in area_location_list:
-    _, _, p = str(l.description).partition("\n\n{'polygon': ")
-    if not p:
-      continue
-    if p != '':
-      p = p[1:-2]
-      plygn = [[float(x), float(y)] for x, y, _ in [s.split(',') for s in p.split()]]
-      x_vals = [x for x, y in plygn]
-      y_vals = [y for x, y in plygn]
-      extents['max_x'] = max(x_vals + [extents.get('max_x')])
-      extents['min_x'] = min(x_vals + [extents.get('min_x')])
-      extents['max_y'] = max(y_vals + [extents.get('max_y')])
-      extents['min_y'] = min(y_vals + [extents.get('min_y')])
-      lng = (extents.get('max_x') + extents.get('min_x')) / 2
-      lat = (extents.get('max_y') + extents.get('min_y')) / 2
-      rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
-      rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
-      rang = max([rang, rang2])
+  rang, lat, lng = get_look_at(area_location_list)
 
   area = current_area
   last_area = area
@@ -163,6 +160,16 @@ from polylabel import polylabel
       </LookAt>
 % endif
       <Placemark id="ID_${"%05d" % loc.id}">
+<% rang, lat, lng = get_look_at([loc]) %>\
+        <LookAt>
+          <longitude>${lng}</longitude>
+          <latitude>${lat}</latitude>
+          <altitude>0</altitude>
+          <heading>0</heading>
+          <tilt>0</tilt>
+          <range>${rang}</range>
+          <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+        </LookAt>
         <name>${loc.code}</name>
         <snippet/>
         <description>
@@ -189,7 +196,7 @@ from polylabel import polylabel
               <LinearRing>
                 <coordinates>
                 ## using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
-                  ${polygon.replace(',0 ', ',0.2 ')}
+                  ${polygon}
                 </coordinates>
               </LinearRing>
             </outerBoundaryIs>

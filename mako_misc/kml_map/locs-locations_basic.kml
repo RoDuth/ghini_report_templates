@@ -24,10 +24,11 @@ from bauble.plugins.report import get_locations_pertinent_to
       <description><![CDATA[]]></description>
 %for loc in get_locations_pertinent_to(values):
 <%
-    description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+    description, _, _ = str(loc.description).partition("\n\n{'polygon': ")
     description = '' if description == 'None' else description.strip()
-    if polygon != '':
-      polygon = polygon[1:-2]
+    polygon = loc.geojson
+    if polygon:
+      polygon = ''.join([str(f'{i[1]},{i[0]},0 ') for i in polygon.get('coordinates')[0]])
 %>\
       <Placemark id="ID_${"%05d" % loc.id}">
         <name/>

@@ -7,6 +7,12 @@ from bauble import gui
 from bauble.utils import xml_safe
 from polylabel import polylabel
 
+def json_to_kml_point(coords):
+    # using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
+    return ','.join(str(i) for i in coords + [0.2])
+
+def json_to_kml_poly(coords):
+    return ' '.join(json_to_kml_point(i) for i in coords[0])
 %>\
 <?xml version="1.0" encoding="UTF-8"?>
 <kml
@@ -35,23 +41,22 @@ from polylabel import polylabel
   lng = lat = 0
 
   for loc in get_locations_pertinent_to(values):
-    _, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+    polygon = None
+    if loc.geojson and loc.geojson.get('type') == 'Polygon':
+      polygon = loc.geojson.get('coordinates')
     if not polygon:
       continue
-    if polygon != '':
-      polygon = polygon[1:-2]
-      plygn = [[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]
-      x_vals = [x for x, y in plygn]
-      y_vals = [y for x, y in plygn]
-      extents['max_x'] = max(x_vals + [extents.get('max_x')])
-      extents['min_x'] = min(x_vals + [extents.get('min_x')])
-      extents['max_y'] = max(y_vals + [extents.get('max_y')])
-      extents['min_y'] = min(y_vals + [extents.get('min_y')])
-      lng = (extents.get('max_x') + extents.get('min_x')) / 2
-      lat = (extents.get('max_y') + extents.get('min_y')) / 2
-      rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
-      rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
-      rang = max([rang, rang2])
+    x_vals = [x for x, y in polygon[0]]
+    y_vals = [y for x, y in polygon[0]]
+    extents['max_x'] = max(x_vals + [extents.get('max_x')])
+    extents['min_x'] = min(x_vals + [extents.get('min_x')])
+    extents['max_y'] = max(y_vals + [extents.get('max_y')])
+    extents['min_y'] = min(y_vals + [extents.get('min_y')])
+    lng = (extents.get('max_x') + extents.get('min_x')) / 2
+    lat = (extents.get('max_y') + extents.get('min_y')) / 2
+    rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
+    rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
+    rang = max([rang, rang2])
 %>/
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
@@ -70,7 +75,7 @@ from polylabel import polylabel
       <tr>
         <td>
           <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
-            ${xml_safe(gui.widgets.main_comboentry.child.get_text())}
+            ${xml_safe(gui.widgets.main_comboentry.get_child().get_text())}
           </code>
         </td>
       </tr>
@@ -79,15 +84,16 @@ from polylabel import polylabel
       ## TODO what to do if we have no coords?  or even if we only have a single point or something?
 %for style, loc in enumerate(get_locations_pertinent_to(values)):
 <%
-    description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
+    description = ''
+    if loc.description:
+      description, _, _ = str(loc.description).partition("\n\n{'polygon': ")
+    description = description.strip()
+    polygon = None
+    if loc.geojson and loc.geojson.get('type') == 'Polygon':
+      polygon = loc.geojson.get('coordinates')
     if not polygon:
       continue
-    description = '' if description == 'None' else description.strip()
-    if polygon != '':
-      polygon = polygon[1:-2] + ' '
-      ## take the kml string and splits it into a list of lists of lat,long coords (and drops the altitude)
-      plygn = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
-      coords = polylabel(plygn, precision=0.0001)
+    coords = polylabel(polygon, precision=0.0001)
     polystyle = style % 6
 %>\
       <Placemark id="ID_${"%05d" % loc.id}">
@@ -104,12 +110,12 @@ from polylabel import polylabel
           <Polygon>
             <extrude>1</extrude>
             <tessellate>1</tessellate>
+            ## relativeToGround with a minimal altitude gets rid of shading issues
             <altitudeMode>relativeToGround</altitudeMode>
             <outerBoundaryIs>
               <LinearRing>
                 <coordinates>
-                ## using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
-                  ${polygon.replace(',0 ', ',0.2 ')}
+                  ${json_to_kml_poly(polygon)}
                 </coordinates>
               </LinearRing>
             </outerBoundaryIs>
