@@ -1,0 +1,36 @@
+## vim:set ft=mako:
+## intended to be used from an all species search. (i.e. "species like %")
+<%
+all_strings = set()
+
+strings = set()
+for species in values:
+  if species.sp:
+    for i in species.sp.split():
+      strings.add(i)
+  if species.infrasp1:
+    for i in species.infrasp1.split():
+      strings.add(i)
+  if species.infrasp2:
+    for i in species.infrasp1.split():
+      strings.add(i)
+  if species.infrasp3:
+    for i in species.infrasp1.split():
+      strings.add(i)
+  if species.infrasp4:
+    for i in species.infrasp1.split():
+      strings.add(i)
+  strings.add(species.genus.genus)
+  strings.add(species.genus.family.family)
+for i in strings:
+  i = i.strip(' ()&.')
+  if len(i) > 1:
+    all_strings.add(i)
+%>\
+// NOTE: first check for any errors then remove these comment lines from the top before
+// saving locally with a ".dic" extension (e.g. "taxonomy.dic").
+// To use: open Word and add it to your list of custom dictionaries.
+// i.e. File tab > Options > Proofing > Custom Dictionaries > add
+% for part in sorted(all_strings):
+${part}
+% endfor
