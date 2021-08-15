@@ -14,23 +14,21 @@ tempdir = tempfile.mkdtemp()
 dirname = expanduser(options.get('save_to_dir').format(tmpdir = tempdir))
 filename = dirname + '/' + options.get('save_to_filename')
 
-# create the PRJ file  TODO need to check this for our situation http://geospatialpython.com/2011/02/create-prj-projection-file-for.html
+epsg = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
 with open("{}.prj".format(filename), "w") as prj:
-    epsg = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
     prj.write(epsg)
     prj.close()
 
 %>\
 <%
-location_list = sorted(get_locations_pertinent_to(values), key=lambda x: x.code)
-
-
 with shapefile.Writer(filename) as shpf:
-    shpf.field('code', 'C', size=24)
+    shpf.field('loc_id', 'N')
+    shpf.field('loc_code', 'C', size=24)
     shpf.field('name', 'C', size=126)
-    shpf.field('description', 'C')
+    shpf.field('descript', 'C')  ## note 10 char limit for fieldnames in esri - doesn't seem to bother QGIS
+    shpf.field('field_note', 'C', size=255)
 
-    for loc in location_list:
+    for loc in get_locations_pertinent_to(values):
         description, _, polygon = str(loc.description).partition("\n\n{'polygon': ")
         if not polygon or len(polygon) < 3:
             continue
@@ -39,9 +37,11 @@ with shapefile.Writer(filename) as shpf:
 
         coords = [[[float(x), float(y)] for x, y, _ in [s.split(',') for s in polygon.split()]]]
         records = {
-            'code': loc.code,
+            'loc_id': loc.id,
+            'loc_code': loc.code,
             'name': loc.name,
-            'description': description
+            'descript': description,
+            'field_note': '',
         }
 
         shpf.record(**records)
