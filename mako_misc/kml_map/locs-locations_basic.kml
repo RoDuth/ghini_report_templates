@@ -1,4 +1,5 @@
 ## vim:set ft=mako:
+## Note this will only work when there is no added base layers, terrain, 3d, etc. as it uses clampToGround and no altitude
 <%!
 from bauble.plugins.report import get_locations_pertinent_to
 %>\
@@ -15,23 +16,22 @@ from bauble.plugins.report import get_locations_pertinent_to
   "
   >
   <Document id="bbg_locs">
-    <name>BBG garden beds</name>
-    <snippet/>
+    <name>Garden Beds</name>
+    <snippet>
+      Note: will not be visible in Google Earth Pro with any 3D, terrain or basemaps set.
+    </snippet>
     <description><![CDATA[]]></description>
-    <Folder id="FeatureLayer0">
-      <name>BBG garden beds</name>
-      <snippet/>
-      <description><![CDATA[]]></description>
 %for loc in get_locations_pertinent_to(values):
 <%
     description, _, _ = str(loc.description).partition("\n\n{'polygon': ")
     description = '' if description == 'None' else description.strip()
     polygon = loc.geojson
-    if polygon:
-      polygon = ''.join([str(f'{i[1]},{i[0]},0 ') for i in polygon.get('coordinates')[0]])
+    if not polygon:
+      continue
+    polygon = ''.join([str(f'{i[0]},{i[1]},0 ') for i in polygon.get('coordinates')[0]])
 %>\
       <Placemark id="ID_${"%05d" % loc.id}">
-        <name/>
+        <name>${loc.code}</name>
         <snippet/>
         <description>
         <![CDATA[
@@ -54,7 +54,6 @@ from bauble.plugins.report import get_locations_pertinent_to
         </Polygon>
       </Placemark>
 % endfor
-    </Folder>
     <Style id="PolyStyle00">
       <LabelStyle>
         <color>00000000</color>
