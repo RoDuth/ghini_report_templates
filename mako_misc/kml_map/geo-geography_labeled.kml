@@ -1,0 +1,442 @@
+## vim: ft=mako:fdm=marker
+## OPTION geographic_map_title: (type: string, default: 'Geographic Areas', tooltip: 'the map title')
+## OPTION group_in_folders: (type: boolean, default: 'false', tooltip: 'if true or 1 split the areas up into folders of overall areas codes')
+## OPTION multicoloured_areas: (type: boolean, default: 'false', tooltip: 'if true or 1 cycle through colours for bed ')
+<%!
+from datetime import datetime
+
+from polylabel import polylabel
+
+from bauble.plugins.report import get_geographies_pertinent_to, options
+from bauble import gui
+
+def get_look_at(lst):
+    # TODO why is Fiji so wrong.
+
+    extents = {
+      'max_x': -180,
+      'min_x': 180,
+      'max_y': -180,
+      'min_y': 180,
+    }
+
+    lng = lat = 0
+
+    count = 0
+    for loc in lst:
+        if loc.geojson and loc.geojson.get('type') == 'Polygon':
+            polygon = loc.geojson.get('coordinates')[0]
+            x_vals = [x for x, y in polygon]
+            y_vals = [y for x, y in polygon]
+        elif loc.geojson and loc.geojson.get('type') == 'MultiPolygon':
+            multi = loc.geojson.get('coordinates')
+            x_vals = [x for polygon in multi for x, y in polygon[0]]
+            y_vals = [y for  polygon in multi for x, y in polygon[0]]
+        else:
+            continue
+        count += 1
+        extents['max_x'] = max(x_vals + [extents.get('max_x')])
+        extents['min_x'] = min(x_vals + [extents.get('min_x')])
+        extents['max_y'] = max(y_vals + [extents.get('max_y')])
+        extents['min_y'] = min(y_vals + [extents.get('min_y')])
+
+    if count == 0:
+        return None, None, None
+    lng = (extents.get('max_x') + extents.get('min_x')) / 2
+    lat = (extents.get('max_y') + extents.get('min_y')) / 2
+    rang = abs(extents.get('max_x') - extents.get('min_x')) * 100000
+    rang2 = abs(extents.get('max_y') - extents.get('min_y')) * 150000
+    rang =  max([rang, rang2, 30000])
+
+    return rang, lat, lng
+
+def tree_trav(obj_list):
+    flat = []
+    def flatten(forest):
+        for i in forest:
+            flat.append(i['object'])
+            if i['children']:
+                flatten(i['children'])
+
+    nodes = dict()
+    forest = []
+    obj_list.sort(key= lambda i: i.tdwg_level)
+    for obj in obj_list:
+        nodes[obj.tdwg_code] = {'object': obj, 'children': []}
+    root_level = obj_list[0].tdwg_level
+    for obj in obj_list:
+        # TODO what to do if haven't got a parent to add to? (i.e. a mismatch of root levels)
+        node = nodes[obj.tdwg_code]
+        if obj.tdwg_level == root_level:
+            forest.append(node)
+        else:
+            if nodes.get(obj.parent.tdwg_code):
+                nodes[obj.parent.tdwg_code]['children'].append(node)
+            else:
+                forest.append(node)
+    flatten(forest)
+    return flat
+%>\
+<%
+  areas = get_geographies_pertinent_to(values)
+  folder_tree = []
+%>\
+##
+<%def name="poly_block(coords, polygon)">
+        <MultiGeometry>
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0
+            </coordinates>
+          </Point>
+          <Polygon>
+            <extrude>1</extrude>
+            <altitudeMode>clampToGround</altitudeMode>
+            <outerBoundaryIs>
+              <LinearRing>
+                <coordinates>
+                  ${polygon}
+                </coordinates>
+              </LinearRing>
+            </outerBoundaryIs>
+          </Polygon>
+        </MultiGeometry>
+</%def>\
+##
+<%def name="multipoly_block(multi_poly)">
+        <MultiGeometry>
+    % for polygon, coords in multi_poly:
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0
+            </coordinates>
+          </Point>
+          <Polygon>
+            <extrude>1</extrude>
+            <altitudeMode>clampToGround</altitudeMode>
+            <outerBoundaryIs>
+              <LinearRing>
+                <coordinates>
+                  ${polygon}
+                </coordinates>
+              </LinearRing>
+            </outerBoundaryIs>
+          </Polygon>
+    % endfor
+        </MultiGeometry>
+</%def>\
+##
+<%def name="look_at(loc_list)">
+<%
+  rang, lat, lng = get_look_at(loc_list)
+
+  if not rang:
+    raise Exception("Can't find anything to map for the current selection")
+%>\
+    <LookAt>
+      <longitude>${lng}</longitude>
+      <latitude>${lat}</latitude>
+      <altitude>0</altitude>
+      <heading>0</heading>
+      <tilt>0</tilt>
+      <range>${rang}</range>
+      <altitudeMode>clampToGround</altitudeMode>
+    </LookAt>
+</%def>\
+##
+<%def name="placemark_open(area)">
+      <Placemark id="ID_${"%05d" % area.id}">
+        ${look_at([area])}
+        <name>${area.name}</name>
+        <snippet/>
+        <description>
+        <![CDATA[
+        <h2>${area.name}</h2>
+        ## Note: these level names are my interpretation.  Not necesarily there formal names.
+        <p>WGSRPD Level: ${['Continent', 'Region', 'Area', 'Unit'][area.tdwg_level - 1]}</p>
+        <h3>WGSRPD Code: ${area.tdwg_code}</h3>
+        <p>ISO Code: ${area.iso_code or ''}</p>
+        ]]>
+        </description>
+</%def>\
+##
+<%def name="placemark_close()">
+      </Placemark>
+</%def>\
+##
+<%def name="style(val=None)">
+% if val:
+        <styleUrl>#PolyStyle0${val}</styleUrl>
+% else:
+        <styleUrl>#PolyStyleWhite</styleUrl>
+% endif
+</%def>\
+##
+<%def name="folder_open(name)">
+  <Folder id="${name}">
+  <name>${name}</name>
+</%def>\
+##
+<%def name="folder_close()">
+    </Folder>
+</%def>\
+##
+<%def name="folder_tag(name, parent_name)">
+<%
+  append = None
+%>\
+% if not folder_tree:
+    <% append = (name, False) %>\
+% elif folder_tree[-1][0] == parent_name:
+    % if not folder_tree[-1][1]:
+    ${folder_open(parent_name)}
+    <% folder_tree[-1] = (parent_name, True) %>\
+    % endif
+    <% append = (name, False) %>\
+% elif folder_tree[-1][0] != parent_name:
+    % if folder_tree[-1][1]:
+    ${folder_close()}
+    % endif
+    <% folder_tree.pop() %>\
+    ${folder_tag(name, parent_name)}
+% endif
+## avoid appending in loop
+% if append:
+    <% folder_tree.append(append) %>\
+% endif
+</%def>\
+##
+<?xml version="1.0" encoding="UTF-8"?>
+<kml
+  xmlns="http://www.opengis.net/kml/2.2"
+  xmlns:gx="http://www.google.com/kml/ext/2.2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+  http://www.opengis.net/kml/2.2
+  http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd
+  http://www.google.com/kml/ext/2.2
+  http://code.google.com/apis/kml/schema/kml22gx.xsd
+  "
+  >
+  <Document id="wgsrpd">
+    <name>${options.get('geographic_map_title')}</name>
+    <snippet/>
+    ${look_at(areas)}
+    <snippet>generated in ghini.desktop ${datetime.now().replace(microsecond=0)}</snippet>
+    <description><![CDATA[
+      <table width='350px'>
+        <tr>
+          <td>search string used:</td>
+        </tr>
+        <tr>
+          <td>
+            <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
+              ${gui.widgets.main_comboentry.get_child().get_text() | h}
+            </code>
+          </td>
+        </tr>
+      </table>
+      ]]>
+    </description>
+% for i, area in enumerate(tree_trav(areas)):
+<%
+  polygon = multi = None
+  multi_poly = []
+  json = area.geojson
+  if json and json.get('type') == 'Polygon':
+      polygon = json.get('coordinates')[0]
+      coords = polylabel([polygon], precision=0.0001)
+      polygon = ' '.join([str(f'{i[0]},{i[1]},0') for i in polygon])
+  elif json and json.get('type') == 'MultiPolygon':
+      multi = area.geojson.get('coordinates')
+      for polygon in multi:
+          coords = polylabel([polygon[0]], precision=0.0001)
+          multi_poly.append([' '.join([str(f'{i[0]},{i[1]},0') for i in polygon[0]]), coords])
+  else:
+      continue
+
+  style_val = i % 6
+%>\
+% if options.get('group_in_folders'):
+    % try:
+        ${folder_tag(area.name, area.parent.name)}
+    % except:
+        ${folder_tag(area.name, None)}
+    % endtry
+% endif
+    ${placemark_open(area)}
+    % if options.get('multicoloured_areas'):
+    ${style(style_val)}
+    % else:
+    ${style()}
+    % endif
+% if multi:
+    ${multipoly_block(multi_poly)}
+% else:
+    ${poly_block(coords, polygon)}
+% endif
+    ${placemark_close()}
+% endfor
+% if options.get('group_in_folders'):
+    % for i in folder_tree:
+        % if i[1]:
+    ${folder_close()}
+        % endif
+    % endfor
+% endif
+    <Style id="PolyStyleWhite">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ff00ffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffffffff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ffffff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle00">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>300000ff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle01">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff00ff00</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>3000ff00</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle02">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffff0000</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ff0000</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle03">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ff00ffff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>3000ffff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle04">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffffff00</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ffff00</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="PolyStyle05">
+      <BalloonStyle>
+      <text><font face="Arial">$[description]</font></text>
+      ## <text>$[description]</text>
+      </BalloonStyle>
+      <IconStyle>
+      ## Hide the pushpin, works in Google Earth but not AGOL
+        <scale>0</scale>
+      </IconStyle>
+      <LabelStyle>
+        <color>ffffffff</color>
+        <colorMode>normal</colorMode>
+      </LabelStyle>
+      <LineStyle>
+        <color>ffff00ff</color>
+        <width>2.000000</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>30ff00ff</color>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+  </Document>
+</kml>
