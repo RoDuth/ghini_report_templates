@@ -1,13 +1,12 @@
 ## vim: ft=mako:fdm=marker
 ## OPTION bed_map_title: (type: string, default: 'Garden Beds', tooltip: 'the map title')
-## OPTION area_folders: (type: boolean, default: 'false', tooltip: 'if true or 1 split the areas up into folders of overall areas codes')
-## OPTION multicoloured_beds: (type: boolean, default: 'false', tooltip: 'if true or 1 cycle through colours for bed ')
+## OPTION area_folders: (type: boolean, default: 'false', tooltip: 'select to organise by overall area codes')
+## OPTION multicoloured_beds: (type: boolean, default: 'false', tooltip: 'select to use bed colours')
 <%!
 import re
 from datetime import datetime
 from bauble.plugins.report import get_locations_pertinent_to, options
 from bauble import gui
-from bauble.utils import xml_safe
 from polylabel import polylabel
 
 
@@ -48,37 +47,32 @@ def get_look_at(lst):
     return rang, lat, lng
 
 %>\
-<?xml version="1.0" encoding="UTF-8"?>
-<kml
-  xmlns="http://www.opengis.net/kml/2.2"
-  xmlns:gx="http://www.google.com/kml/ext/2.2"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="
-  http://www.opengis.net/kml/2.2
-  http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd
-  http://www.google.com/kml/ext/2.2
-  http://code.google.com/apis/kml/schema/kml22gx.xsd
-  "
-  >
-  <Document id="bbg_locs">
-    <name>${options.get('bed_map_title')}</name>
-    <snippet/>
-    <LookAt>
-    ## make an educated guess for LookAt
+<%def name="poly_block(coords, polygon)">\
+          <Point>
+            <coordinates>
+              ${coords[0]},${coords[1]},0.1
+            </coordinates>
+          </Point>
+          <Polygon>
+            <extrude>1</extrude>
+            <altitudeMode>relativeToGround</altitudeMode>
+            <outerBoundaryIs>
+              <LinearRing>
+                <coordinates>
+                  ${polygon}
+                </coordinates>
+              </LinearRing>
+            </outerBoundaryIs>
+          </Polygon>
+</%def>\
+<%def name="look_at(loc_list)">\
 <%
+rang, lat, lng = get_look_at(loc_list)
 
-  rang, lat, lng = get_look_at(get_locations_pertinent_to(values))
-
-  if not rang:
-    raise Exception("Can't find anything to map for the current selection")
-
-  try:
-    # PyGTK
-    search_string = xml_safe(gui.widgets.main_comboentry.child.get_text())
-  except AttributeError:
-    # PyGObject
-    search_string = xml_safe(gui.widgets.main_comboentry.get_child().get_text())
-%>/
+if not rang:
+   raise Exception("Can't find anything to map for the current selection")
+%>\
+    <LookAt>
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
       <altitude>0</altitude>
@@ -87,6 +81,13 @@ def get_look_at(lst):
       <range>${rang}</range>
       <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
     </LookAt>
+</%def>\
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/ogckml22.xsd http://www.google.com/kml/ext/2.2 http://code.google.com/apis/kml/schema/kml22gx.xsd">
+  <Document id="bbg_locs">
+    <name>${options.get('bed_map_title')}</name>
+    <snippet/>
+${look_at(get_locations_pertinent_to(values))}\
     <snippet>generated in ghini.desktop ${datetime.now().replace(microsecond=0)}</snippet>
     <description><![CDATA[
     <table width='350px'>
@@ -96,7 +97,7 @@ def get_look_at(lst):
       <tr>
         <td>
           <code style="background-color:#eee;border-radius:3px;padding:3px;line-height:1.4;">
-            ${search_string}
+            ${gui.widgets.main_comboentry.get_child().get_text() | h}
           </code>
         </td>
       </tr>
@@ -132,44 +133,25 @@ def get_look_at(lst):
     if match:
       current_area = match.group(1)
 %>\
-% if options.get('area_folders').lower() in ['true', '1'] and current_area != area:
+% if options.get('area_folders') and current_area != area:
     % if last_area:
     </Folder>
     % endif
     <Folder id="${current_area}">
       <name>${current_area}</name>
-      <LookAt>
       ## make an educated guess for LookAt
 <%
 
   area_location_list = [i for i in get_locations_pertinent_to(values) if i.code.startswith(current_area)]
 
-  rang, lat, lng = get_look_at(area_location_list)
-
   area = current_area
   last_area = area
 
 %>\
-        <longitude>${lng}</longitude>
-        <latitude>${lat}</latitude>
-        <altitude>0</altitude>
-        <heading>0</heading>
-        <tilt>0</tilt>
-        <range>${rang}</range>
-        <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
-      </LookAt>
+${look_at(area_location_list)}\
 % endif
       <Placemark id="ID_${"%05d" % loc.id}">
-<% rang, lat, lng = get_look_at([loc]) %>\
-        <LookAt>
-          <longitude>${lng}</longitude>
-          <latitude>${lat}</latitude>
-          <altitude>0</altitude>
-          <heading>0</heading>
-          <tilt>0</tilt>
-          <range>${rang}</range>
-          <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
-        </LookAt>
+${look_at([loc])}\
         <name>${loc.code}</name>
         <snippet/>
         <description>
@@ -178,36 +160,20 @@ def get_look_at(lst):
         <p>${description}</p>
         ]]>
         </description>
-% if options.get('multicoloured_beds').lower() in ['true', '1']:
+% if options.get('multicoloured_beds'):
         <styleUrl>#PolyStyle0${polystyle}</styleUrl>
 % else:
         <styleUrl>#PolyStyle00</styleUrl>
 % endif
         <MultiGeometry>
-          <Point>
-            <coordinates>
-              ${coords[0]},${coords[1]},0
-            </coordinates>
-          </Point>
-          <Polygon>
-            <extrude>1</extrude>
-            <altitudeMode>relativeToGround</altitudeMode>
-            <outerBoundaryIs>
-              <LinearRing>
-                <coordinates>
-                ## using relativeToGround with a minimal altitude gets rid of shading issues (zooming in/out with nearmap or osm overlays)
-                  ${polygon}
-                </coordinates>
-              </LinearRing>
-            </outerBoundaryIs>
-          </Polygon>
+${poly_block(coords, polygon)}\
         </MultiGeometry>
       </Placemark>
 % endfor
-% if options.get('area_folders').lower() in ['true', '1']:
+% if options.get('area_folders'):
     </Folder>
 % endif
-% if options.get('multicoloured_beds').lower() in ['true', '1']:
+% if options.get('multicoloured_beds'):
     <Style id="PolyStyle00">
       <BalloonStyle>
       <text><font face="Arial">$[description]</font></text>

@@ -197,14 +197,14 @@ def json_to_kml_poly(coords):
       ## unique id's are handy for linking to e.g. http://www.myserver.com/mykml.kml#ID_00102
       <Placemark id="ID_${"%05d" % plt.id}">
         <name>${plt.accession.species_str()}</name>
-        % if options.get('snip_acc').lower() in ['true', '1']:
+        % if options.get('snip_acc'):
         <snippet>${xml_safe(plt)}</snippet>
         % else:
         <snippet/>
         % endif
         <description>
         <![CDATA[
-        <h2>${plt.accession.species_str(authors=(options.get('authors').lower() in ['true', '1']), markup=True)}</h2>
+        <h2>${plt.accession.species_str(authors=options.get('authors'), markup=True)}</h2>
         <table>
           <tr>
             <td>ACCESSION:</td>
