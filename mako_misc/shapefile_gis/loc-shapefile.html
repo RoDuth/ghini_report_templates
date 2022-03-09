@@ -1,7 +1,7 @@
 ## vim: ft=mako:fdm=marker
 ## OPTION save_to_dir: (type: string, default: '{tmpdir}', tooltip: 'Directory to save the output, use {tmpdir} for the temp file system, ~ for home.')
 ## OPTION save_to_filename: (type: string, default: 'garden_beds', tooltip: 'common filename for the output files excluding the extension')
-## OPTION open_dir_or_file: (type: string, default: 'None', tooltip: 'This template will preduce several files that are all needed togther, this option allows you to choose to open the folder or just the .shp file in the default system app, options are "dir" or "file".  Anything else wont attempt to open anything')
+## OPTION open_dir_or_file: (type: string, default: 'dir', tooltip: 'This template will produce several files that are all needed togther, this option allows you to choose to open the folder or just the .shp file in the default system app, options are "dir" or "file".  Anything else wont attempt to open anything')
 ## TODO need to have the option to break this up into several shapefiles by overall areas
 <%!
 import tempfile
@@ -70,6 +70,6 @@ elif options.get('open_dir_or_file').lower() == 'file':
 
 <body>
   <h1> Your shapefile should be complete </h1>
-  <p> They are available in <a href="${dirname}/"> this </a> directory on your filesystem (copy the link and paste it into your file manager)</p>
+  <p> They are available in the <a href="${dirname}/"> this </a> directory on your filesystem (copy the link and paste it into your file manager)</p>
 </body>
 </html>

@@ -30,12 +30,107 @@
           <xsl:for-each select="abcd:DataSet">
             <xsl:for-each select=".//abcd:Unit">
 
+
+              <!-- FULL BOTANIC NAME -->
+              <!-- we construct the full name in a variable so we can check it to get a font size -->
+              <xsl:variable name="full-botanic-name">
+                <!-- GENUS -->
+                <!--  ID Qualifier, if present at genus level -->
+                <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='genus']">
+                  <fo:inline font-style="normal">
+                    <xsl:choose>
+                      <xsl:when test=".//abcd:IdentificationQualifier = 'incorrect'">
+                        <xsl:text>(incorrect)</xsl:text>
+                      </xsl:when>
+                      <xsl:otherwise><xsl:value-of select=".//abcd:IdentificationQualifier"/></xsl:otherwise>
+                    </xsl:choose>
+                    <xsl:if test=".//abcd:IdentificationQualifier != '?'"><xsl:text> </xsl:text></xsl:if>
+                  </fo:inline>
+                </xsl:if>
+                <xsl:choose>
+                  <!-- Check for botanist tag Genus name by looking for 3 capital letters at start -->
+                  <xsl:when test="starts-with(translate(.//abcd:GenusOrMonomial,
+                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                    'XXXXXXXXXXXXXXXXXXXXXXXXXX'), 'XXX')">
+                    <fo:inline font-style="normal">
+                      <xsl:value-of select=".//abcd:GenusOrMonomial" />
+                    </fo:inline>
+                  </xsl:when>
+                  <!-- Check for nothogenus -->
+                  <xsl:when test="starts-with(.//abcd:GenusOrMonomial, 'x')">
+                    <fo:inline font-style="normal"><xsl:text>×</xsl:text></fo:inline>
+                    <xsl:value-of select="substring(.//abcd:GenusOrMonomial,2)"/>
+                  </xsl:when>
+                  <!-- For normal genus -->
+                  <xsl:otherwise>
+                    <xsl:value-of select=".//abcd:GenusOrMonomial" />
+                  </xsl:otherwise>
+                </xsl:choose>
+                <!-- SPECIES -->
+                <!-- first check if the field is in use -->
+                <xsl:if test=".//abcd:FirstEpithet != ''">
+                  <xsl:text> </xsl:text>
+                  <!--  ID Qualifier, if present at species level -->
+                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='sp']">
+                    <fo:inline font-style="normal">
+                      <xsl:value-of select=".//abcd:IdentificationQualifier"/>
+                      <xsl:if test=".//abcd:IdentificationQualifier != '?'"><xsl:text> </xsl:text></xsl:if>
+                    </fo:inline>
+                  </xsl:if>
+                  <xsl:choose>
+                    <!-- Check for "sp." -->
+                    <xsl:when test="starts-with(.//abcd:FirstEpithet, 'sp.')">
+                      <fo:inline font-style="normal">
+                        <xsl:value-of select=".//abcd:FirstEpithet"/>
+                      </fo:inline>
+                    </xsl:when>
+                    <xsl:otherwise>
+                      <!-- for nothotaxon hybrid with flag -->
+                      <xsl:value-of select=".//abcd:HybridFlag"/>
+                      <xsl:value-of select=".//abcd:FirstEpithet"/>
+                    </xsl:otherwise>
+                  </xsl:choose>
+                </xsl:if>
+                <!-- RANK -->
+                <!--  ID Qualifier, if present at infraspecific rank level -->
+                <xsl:if test=".//abcd:Rank != ''">
+                  <xsl:text> </xsl:text>
+                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='infrasp']">
+                    <fo:inline font-style="normal">
+                      <xsl:value-of select=".//abcd:IdentificationQualifier"/>
+                      <xsl:if test=".//abcd:IdentificationQualifier != '?'"><xsl:text> </xsl:text></xsl:if>
+                    </fo:inline>
+                  </xsl:if>
+                  <fo:inline font-style="normal">
+                    <xsl:value-of select=".//abcd:Rank"/>
+                  </fo:inline>
+                </xsl:if>
+                <!-- INFRASPECIFIC EPITHET -->
+                <xsl:if test=".//abcd:InfraspecificEpithet != ''">
+                  <xsl:text> </xsl:text>
+                  <xsl:choose>
+                    <xsl:when test=".//abcd:Rank != ''">
+                      <xsl:value-of select=".//abcd:InfraspecificEpithet"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                      <fo:inline font-style="normal">
+                        <xsl:value-of select=".//abcd:InfraspecificEpithet"/>
+                      </fo:inline>
+                    </xsl:otherwise>
+                  </xsl:choose>
+                </xsl:if>
+                <!-- CULTIVAR -->
+                <xsl:if test=".//abcd:CultivarName != ''">
+                  <fo:inline font-style="normal">
+                    <xsl:text> </xsl:text>
+                    <xsl:value-of select=".//abcd:CultivarName"/>
+                  </fo:inline>
+                </xsl:if>
+              </xsl:variable>
+
               <!-- SET FONTS SIZE FOR BOTANIC NAME -->
 
               <!-- calculate the length of the botanic name -->
-              <xsl:variable name="full-botanic-name">
-                <xsl:value-of select=".//FullSpeciesName"/>
-              </xsl:variable>
               <xsl:variable name="bot-name-length">
                 <xsl:value-of select="string-length($full-botanic-name)"/>
               </xsl:variable>
@@ -50,8 +145,8 @@
                 <!-- set some conditions that determine the font size -->
                 <xsl:choose>
                   <!-- Test if the first or last lines worth of chars contain any spaces/linebreaks -->
-                  <xsl:when test="string-length(substring-before(string($full-botanic-name), ' ')) &gt; 22 or
-                    not(contains(substring(string($full-botanic-name), string-length(string($full-botanic-name)) - 22), ' '))">
+                  <xsl:when test="string-length(substring-before(string($full-botanic-name), ' ')) &gt; 24 or
+                    not(contains(substring(string($full-botanic-name), string-length(string($full-botanic-name)) - 24), ' '))">
                     <xsl:value-of select="'22pt'"/>
                   </xsl:when>
                   <!-- Test if the longer names have any spaces/linebreaks in the middle -->
@@ -59,11 +154,11 @@
                     <xsl:value-of select="'24pt'"/>
                   </xsl:when>
                   <!-- Test for extra long names -->
-                  <xsl:when test="$bot-name-total-length &gt; 37">
+                  <xsl:when test="$bot-name-total-length &gt; 47">
                     <xsl:value-of select="'22pt'"/>
                   </xsl:when>
                   <!-- Test for long names -->
-                  <xsl:when test="$bot-name-total-length &gt; 35">
+                  <xsl:when test="$bot-name-total-length &gt; 45">
                     <xsl:value-of select="'24pt'"/>
                   </xsl:when>
                   <!-- Normal: failing any of the above tests set the font to normal size -->
@@ -131,12 +226,13 @@
                   <fo:block
                     font-size="{$bot-name-font-size}"
                     font-family="Helvetica"
+                    font-style="italic"
                     font-weight="bold"
                     margin-left="4mm"
                     margin-right="4mm"
-                    text-align="center"
+                    text-align="left"
                     >
-                    <xsl:apply-templates select="FullSpeciesNameMarkup"/>
+                    <xsl:copy-of select="$full-botanic-name" />
                   </fo:block>
                 </fo:block-container>
 
@@ -159,6 +255,7 @@
 
                 <!-- FAMILY -->
 
+                <!-- Should check for HigherTaxon = familia -->
                 <fo:block-container
                   absolute-position="absolute"
                   top="49mm"
@@ -202,13 +299,4 @@
       </fo:page-sequence>
     </fo:root>
   </xsl:template>
-
-  <xsl:template match="FullSpeciesNameMarkup">
-      <xsl:apply-templates/>
-  </xsl:template>
-
-  <xsl:template match="i">
-    <fo:inline font-style="italic"><xsl:value-of select="."/></fo:inline>
-  </xsl:template>
-
 </xsl:stylesheet>

@@ -60,16 +60,28 @@
               <fo:table-cell
                 border=".75pt solid black">
                 <fo:block>
-                  <xsl:value-of
-                    select=".//abcd:FullScientificNameString" />
+                  <xsl:value-of select=".//abcd:FullScientificNameString" />
                 </fo:block>
               </fo:table-cell>
 
               <fo:table-cell border=".75pt solid black">
                 <fo:block>
-                  <xsl:for-each select="Notes">
-                    <xsl:value-of select=".//Collection_note" />
-                  </xsl:for-each>
+                  Locality: <xsl:value-of select="abcd:Gathering/abcd:LocalityText" />
+                </fo:block>
+                <fo:block>
+                  Collector: <xsl:value-of select=".//abcd:AgentText" />
+                </fo:block>
+                <fo:block>
+                  Code: <xsl:value-of select="abcd:Gathering/abcd:Code" />
+                </fo:block>
+                <fo:block>
+                  Latitude: <xsl:value-of select="abcd:Gathering//abcd:LatitudeDecimal" />
+                </fo:block>
+                <fo:block>
+                  Longitude: <xsl:value-of select="abcd:Gathering//abcd:LongitudeDecimal" />
+                </fo:block>
+                <fo:block>
+                  Date: <xsl:value-of select="abcd:Gathering/abcd:DateTime/abcd:DateText" />
                 </fo:block>
               </fo:table-cell>
 
