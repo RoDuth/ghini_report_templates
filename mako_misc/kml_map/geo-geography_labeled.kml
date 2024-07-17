@@ -61,18 +61,18 @@ def tree_trav(obj_list):
 
     nodes = dict()
     forest = []
-    obj_list.sort(key= lambda i: i.tdwg_level)
+    obj_list.sort(key= lambda i: i.level)
     for obj in obj_list:
-        nodes[obj.tdwg_code] = {'object': obj, 'children': []}
-    root_level = obj_list[0].tdwg_level
+        nodes[obj.code] = {'object': obj, 'children': []}
+    root_level = obj_list[0].level
     for obj in obj_list:
         # TODO what to do if haven't got a parent to add to? (i.e. a mismatch of root levels)
-        node = nodes[obj.tdwg_code]
-        if obj.tdwg_level == root_level:
+        node = nodes[obj.code]
+        if obj.level == root_level:
             forest.append(node)
         else:
-            if nodes.get(obj.parent.tdwg_code):
-                nodes[obj.parent.tdwg_code]['children'].append(node)
+            if nodes.get(obj.parent.code):
+                nodes[obj.parent.code]['children'].append(node)
             else:
                 forest.append(node)
     flatten(forest)
@@ -153,9 +153,8 @@ def tree_trav(obj_list):
         <description>
         <![CDATA[
         <h2>${area.name}</h2>
-        ## Note: these level names are my interpretation.  Not necesarily there formal names.
-        <p>WGSRPD Level: ${['Continent', 'Region', 'Area', 'Unit'][area.tdwg_level - 1]}</p>
-        <h3>WGSRPD Code: ${area.tdwg_code}</h3>
+        <p>WGSRPD Level: ${['Continent', 'Region', 'Botanical Country', 'Unit'][area.level - 1]}</p>
+        <h3>WGSRPD Code: ${area.code}</h3>
         <p>ISO Code: ${area.iso_code or ''}</p>
         ]]>
         </description>
@@ -239,7 +238,7 @@ def tree_trav(obj_list):
       </table>
       ]]>
     </description>
-% for i, area in enumerate(tree_trav(areas)):
+% for i, area in enumerate(tree_trav(list(areas))):
 <%
   polygon = multi = None
   multi_poly = []
