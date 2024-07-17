@@ -52,6 +52,7 @@ def get_look_at(lst):
 
 def tree_trav(obj_list):
     flat = []
+
     def flatten(forest):
         for i in forest:
             flat.append(i['object'])

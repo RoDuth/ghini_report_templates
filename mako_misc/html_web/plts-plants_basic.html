@@ -1,4 +1,5 @@
 ## vim: set filetype=mako:
+## OPTION use_private: (type: boolean, default: 'false', tooltip: '')
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,9 +15,11 @@
 
 <body>
   <%
-    from bauble.plugins.report import get_plants_pertinent_to
+    from bauble.plugins.report import get_plants_pertinent_to, options
   %>
-  % for p in get_plants_pertinent_to(values):
+  % for p in get_plants_pertinent_to(values, as_task=True):
+    % if options.get('use_private') or p.accession.private == False:
     <p class="value">${p}</p>
+    % endif
   % endfor
 </body>

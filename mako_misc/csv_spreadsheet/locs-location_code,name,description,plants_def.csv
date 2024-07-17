@@ -12,6 +12,6 @@ ${plant.__str__()}; \
 </%def>\
 Code,Name,Description,Accessions
 ##
-%for l in get_locations_pertinent_to(values):
+% for l in get_locations_pertinent_to(values):
 "bed#:${l.code or ''}","${l.name or ''}","${l.description or ''}","${plantlist(l)}"
 % endfor

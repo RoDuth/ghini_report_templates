@@ -7,4 +7,4 @@ Mako templates are capable of producing a variety of file formats.
 xsl templates produce pdf files.
 
 
-(For map icons, see: https://mapicons.mapsmarker.com/)
+(For map icons, see: https://mapicons.mapsmarker.com/ )
