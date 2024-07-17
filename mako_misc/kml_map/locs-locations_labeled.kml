@@ -1,6 +1,7 @@
 ## vim: ft=mako:fdm=marker
 ## OPTION bed_map_title: (type: string, default: 'Garden Beds', tooltip: 'the map title')
 ## OPTION area_folders: (type: boolean, default: 'false', tooltip: 'select to organise by overall area codes')
+## OPTION name_as_label: (type: boolean, default: 'false', tooltip: 'select to label beds with their name rather than code')
 ## OPTION multicoloured_beds: (type: boolean, default: 'false', tooltip: 'select to use bed colours')
 <%!
 import re
@@ -128,8 +129,7 @@ ${look_at(get_locations_pertinent_to(values))}\
 
     polystyle = style % 6
     ## grab the overall area code
-    pat = re.compile('([A-za-z]+)\d+')
-    match = pat.match(loc.code)
+    match = re.match(r'([A-za-z]+)\d+', loc.code)
     if match:
       current_area = match.group(1)
 %>\
@@ -152,11 +152,11 @@ ${look_at(area_location_list)}\
 % endif
       <Placemark id="ID_${"%05d" % loc.id}">
 ${look_at([loc])}\
-        <name>${loc.code}</name>
+        <name>${(loc.name or '' if options.get('name_as_label') else loc.code)}</name>
         <snippet/>
         <description>
         <![CDATA[
-        <h3>${loc.name or ''}</h3>
+        <h3>${loc if options.get('name_as_label') else loc.name or ''}</h3>
         <p>${description}</p>
         ]]>
         </description>
