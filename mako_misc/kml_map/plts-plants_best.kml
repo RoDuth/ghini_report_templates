@@ -1,12 +1,14 @@
 ## vim: ft=mako:fdm=marker
 ## OPTION title: (type: string, default: 'Plants Search', tooltip: 'the title')
-## OPTION authors: (type: boolean, default: 'false', tooltip: 'if true or 1 include species authorship in the baloon text, if available')
-## OPTION snip_acc: (type: boolean, default: 'false', tooltip: 'if true or 1 include accession code in places snippet')
-## OPTION folder_sort_order: (type: string, default: 'None', tooltip: 'sort into folders, options are: loc, fam, gen, acc, None')
+## OPTION show_dead: (type: boolean, default: 'false', tooltip: 'select to show dead plants also.')
+## OPTION use_private: (type: boolean, default: 'false', tooltip: 'select to show plants from accessions marked as private also.')
+## OPTION authors: (type: boolean, default: 'false', tooltip: 'select to include species authorship in the baloon text, if available')
+## OPTION snip_acc: (type: boolean, default: 'false', tooltip: 'select to include accession code in the snippet')
+## OPTION folder_sort_order: (type: enum['location','family','genus','accession','None'], default: 'None', tooltip: 'sort into folders')
 <%!
 from datetime import datetime
 from pathlib import Path
-from polylabel import polylabel
+from bauble.utils.geo import polylabel
 from bauble.plugins.report import get_plants_pertinent_to, options
 from bauble import gui
 from bauble.utils import xml_safe
@@ -74,7 +76,11 @@ def json_to_kml_poly(coords):
 
   lng = lat = 0
 
-  for plt in get_plants_pertinent_to(values):
+  for plt in get_plants_pertinent_to(values, as_task=True):
+    if not options.get('show_dead') and plt.death:
+      continue
+    if not options.get('show_private') and plt.accession.private:
+      continue
     geo_point = geo_line = geo_shape = ''
     if plt.geojson:
       if plt.geojson.get('type') == 'Point':
@@ -112,12 +118,7 @@ def json_to_kml_poly(coords):
   except NameError:
     raise Exception("Can't find anything to map for the current selection")
 
-  try:
-    # PyGTK
-    search_string = xml_safe(gui.widgets.main_comboentry.child.get_text())
-  except AttributeError:
-    # PyGObject
-    search_string = xml_safe(gui.widgets.main_comboentry.get_child().get_text())
+  search_string = xml_safe(gui.widgets.main_comboentry.get_child().get_text())
 %>\
       <longitude>${lng}</longitude>
       <latitude>${lat}</latitude>
@@ -145,20 +146,24 @@ def json_to_kml_poly(coords):
 <%
   sorter = None
   last_sorter = None
-  if options.get('folder_sort_order') == 'loc':
-    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.location.code)
-  elif options.get('folder_sort_order') == 'fam':
-    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.species.genus.family.family)
-  elif options.get('folder_sort_order') == 'gen':
-    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.species.genus.genus)
-  elif options.get('folder_sort_order') == 'acc':
-    plant_list = sorted(get_plants_pertinent_to(values), key=lambda x: x.accession.code)
+  if options.get('folder_sort_order') == 'location':
+    plant_list = sorted(get_plants_pertinent_to(values, as_task=True), key=lambda x: x.location.code)
+  elif options.get('folder_sort_order') == 'family':
+    plant_list = sorted(get_plants_pertinent_to(values, as_task=True), key=lambda x: x.accession.species.genus.family.family)
+  elif options.get('folder_sort_order') == 'genus':
+    plant_list = sorted(get_plants_pertinent_to(values, as_task=True), key=lambda x: x.accession.species.genus.genus)
+  elif options.get('folder_sort_order') == 'accession':
+    plant_list = sorted(get_plants_pertinent_to(values, as_task=True), key=lambda x: x.accession.code)
   else:
-    plant_list = get_plants_pertinent_to(values)
+    plant_list = get_plants_pertinent_to(values, as_task=True)
 
 %>\
 % for plt in plant_list:
 <%
+  if not options.get('show_dead') and plt.death:
+    continue
+  if not options.get('show_private') and plt.accession.private:
+    continue
   geo_point = geo_line = geo_shape = None
   if plt.geojson:
     if plt.geojson.get('type') == 'Point':
@@ -175,16 +180,16 @@ def json_to_kml_poly(coords):
 %>\
 % if geo_point or geo_line or geo_shape:
 <%
-  if options.get('folder_sort_order') == 'loc':
+  if options.get('folder_sort_order') == 'location':
     current_sorter = plt.location.code
-  elif options.get('folder_sort_order') == 'fam':
+  elif options.get('folder_sort_order') == 'family':
     current_sorter = plt.accession.species.genus.family.family
-  elif options.get('folder_sort_order') == 'gen':
+  elif options.get('folder_sort_order') == 'genus':
     current_sorter = plt.accession.species.genus.genus
-  elif options.get('folder_sort_order') == 'acc':
+  elif options.get('folder_sort_order') == 'accession':
     current_sorter = plt.accession.code
 %>\
-% if options.get('folder_sort_order') in ['loc', 'fam', 'gen', 'acc'] and current_sorter != sorter:
+% if options.get('folder_sort_order') in ['location', 'family', 'genus', 'accession'] and current_sorter != sorter:
     % if last_sorter:
     </Folder>
     % endif
@@ -196,7 +201,7 @@ def json_to_kml_poly(coords):
 % endif
       ## unique id's are handy for linking to e.g. http://www.myserver.com/mykml.kml#ID_00102
       <Placemark id="ID_${"%05d" % plt.id}">
-        <name>${plt.accession.species_str()}</name>
+        <name>${xml_safe(plt.accession.species_str())}</name>
         % if options.get('snip_acc'):
         <snippet>${xml_safe(plt)}</snippet>
         % else:
@@ -217,22 +222,22 @@ def json_to_kml_poly(coords):
           % if plt.accession.species.default_vernacular_name:
           <tr>
             <td>COMMON:</td>
-            <td>${plt.accession.species.default_vernacular_name}</td>
+            <td>${xml_safe(plt.accession.species.default_vernacular_name)}</td>
           </tr>
           % endif
           % if plt.accession.species.label_distribution:
           <tr>
             <td>DISTRIBUTION:</td>
-            <td>${plt.accession.species.label_distribution}</td>
+            <td>${xml_safe(plt.accession.species.label_distribution)}</td>
           </tr>
           % endif
           <tr>
             <td>FAMILY:</td>
-            <td>${plt.accession.species.genus.family}</td>
+            <td>${xml_safe(plt.accession.species.genus.family)}</td>
           </tr>
           <tr>
             <td>BED:</td>
-            <td>${plt.location.code} ${plt.location.name or ''}</td>
+            <td>${xml_safe(plt.location.code)} ${xml_safe(plt.location.name or '')}</td>
           </tr>
         </table>
         ]]>
@@ -316,7 +321,7 @@ def json_to_kml_poly(coords):
       </Placemark>
 % endif
 % endfor
-% if options.get('folder_sort_order') in ['loc', 'fam', 'gen', 'acc']:
+% if options.get('folder_sort_order') in ['location', 'family', 'genus', 'accession']:
     </Folder>
 % endif
     ## </Folder>

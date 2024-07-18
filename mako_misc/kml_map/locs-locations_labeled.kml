@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 from bauble.plugins.report import get_locations_pertinent_to, options
 from bauble import gui
-from polylabel import polylabel
+from bauble.utils.geo import polylabel
 
 
 def get_look_at(lst):

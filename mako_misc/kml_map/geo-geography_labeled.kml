@@ -5,7 +5,7 @@
 <%!
 from datetime import datetime
 
-from polylabel import polylabel
+from bauble.utils.geo import polylabel
 
 from bauble.plugins.report import get_geographies_pertinent_to, options
 from bauble import gui
