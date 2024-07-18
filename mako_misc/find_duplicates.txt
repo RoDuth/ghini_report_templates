@@ -1,0 +1,17 @@
+## vim:set ft=mako:
+## OPTION field_name: (type: string, default: '', tooltip: 'The name of the field to check, if left blank uses the text string of the object')
+<%!
+from bauble.plugins.report import options
+from collections import Counter
+%>\
+<%
+  field_name = options.get("field_name")
+  if field_name:
+    duplicates = [k for k,v in Counter([getattr(value, field_name) for value in values]).items() if v>1]
+  else:
+    duplicates = [k for k,v in Counter([str(value) for value in values]).items() if v>1]
+%>\
+% for i in duplicates:
+${i}
+% endfor
+
