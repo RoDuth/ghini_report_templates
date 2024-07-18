@@ -211,4 +211,9 @@
     <fo:inline font-style="italic"><xsl:value-of select="."/></fo:inline>
   </xsl:template>
 
+  <!-- TODO could calculate this better -->
+  <xsl:template match="small">
+    <fo:inline font-size="18pt"><xsl:value-of select="."/></fo:inline>
+  </xsl:template>
+
 </xsl:stylesheet>

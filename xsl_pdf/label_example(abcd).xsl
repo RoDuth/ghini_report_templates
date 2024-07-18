@@ -36,7 +36,7 @@
               <xsl:variable name="full-botanic-name">
                 <!-- GENUS -->
                 <!--  ID Qualifier, if present at genus level -->
-                <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='genus']">
+                <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='1']">
                   <fo:inline font-style="normal">
                     <xsl:choose>
                       <xsl:when test=".//abcd:IdentificationQualifier = 'incorrect'">
@@ -56,13 +56,13 @@
                       <xsl:value-of select=".//abcd:GenusOrMonomial" />
                     </fo:inline>
                   </xsl:when>
-                  <!-- Check for nothogenus -->
-                  <xsl:when test="starts-with(.//abcd:GenusOrMonomial, 'x')">
-                    <fo:inline font-style="normal"><xsl:text>×</xsl:text></fo:inline>
-                    <xsl:value-of select="substring(.//abcd:GenusOrMonomial,2)"/>
-                  </xsl:when>
-                  <!-- For normal genus -->
                   <xsl:otherwise>
+                    <!-- Check for nothogenus hybrid with flag -->
+                    <xsl:if test=".//abcd:HybridFlag[@insertionpoint='1']">
+                      <fo:inline font-style="normal">
+                        <xsl:value-of select=".//abcd:HybridFlag"/>
+                      </fo:inline>
+                    </xsl:if>
                     <xsl:value-of select=".//abcd:GenusOrMonomial" />
                   </xsl:otherwise>
                 </xsl:choose>
@@ -71,7 +71,7 @@
                 <xsl:if test=".//abcd:FirstEpithet != ''">
                   <xsl:text> </xsl:text>
                   <!--  ID Qualifier, if present at species level -->
-                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='sp']">
+                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='2']">
                     <fo:inline font-style="normal">
                       <xsl:value-of select=".//abcd:IdentificationQualifier"/>
                       <xsl:if test=".//abcd:IdentificationQualifier != '?'"><xsl:text> </xsl:text></xsl:if>
@@ -86,7 +86,11 @@
                     </xsl:when>
                     <xsl:otherwise>
                       <!-- for nothotaxon hybrid with flag -->
-                      <xsl:value-of select=".//abcd:HybridFlag"/>
+                      <xsl:if test=".//abcd:HybridFlag[@insertionpoint='2']">
+                        <fo:inline font-style="normal">
+                          <xsl:value-of select=".//abcd:HybridFlag"/>
+                        </fo:inline>
+                      </xsl:if>
                       <xsl:value-of select=".//abcd:FirstEpithet"/>
                     </xsl:otherwise>
                   </xsl:choose>
@@ -95,7 +99,7 @@
                 <!--  ID Qualifier, if present at infraspecific rank level -->
                 <xsl:if test=".//abcd:Rank != ''">
                   <xsl:text> </xsl:text>
-                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='infrasp']">
+                  <xsl:if test=".//abcd:IdentificationQualifier[@insertionpoint='3']">
                     <fo:inline font-style="normal">
                       <xsl:value-of select=".//abcd:IdentificationQualifier"/>
                       <xsl:if test=".//abcd:IdentificationQualifier != '?'"><xsl:text> </xsl:text></xsl:if>
