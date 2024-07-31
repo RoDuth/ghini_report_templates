@@ -3,7 +3,7 @@
 Location,Plant,Species
 <%
   items = dict()
-  for p in get_plants_pertinent_to(values):
+  for p in get_plants_pertinent_to(values, as_task=True):
     loc_code = p.location.code
     if loc_code in items:
       items[loc_code].append((p, p.accession.species_str()))
