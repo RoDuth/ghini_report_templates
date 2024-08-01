@@ -1,0 +1,64 @@
+## vim: filetype=mako:foldmethod=marker
+## OPTION match_percentage: (type: string, default: '34', tooltip: 'The percentage of the area required to consolidate to the parent level')
+## OPTION minimum_children: (type: string, default: '2', tooltip: 'The number of children required to consolidate to the parent level')
+<%!
+
+from bauble.plugins.report import get_geographies_pertinent_to, options
+
+from bauble.plugins.plants.geography import consolidate_geographies_by_percent_area
+
+translations = {
+   	"ASIA-TROPICAL": "Tropical Asia",
+   	"ASIA-TEMPERATE": "Temperate Asia",
+   	"SOUTHERN AMERICA": "South America",
+   	"NORTHERN AMERICA": "North America",
+   	"Queensland": "Qld",
+   	"New South Wales": "NSW",
+   	"Northern Territory": "NT",
+   	"Western Australia": "WA",
+   	"South Australia": "SA",
+   	"Tasmania": "Tas",
+   	"Victoria": "Vic",
+}
+
+
+def geo_sorter_key(geo_str):
+    weight = 10
+    if geo_str == "Qld":
+        weight = 0
+    elif geo_str == "NSW":
+        weight = 1
+    elif geo_str == "NT":
+        weight = 2
+    elif geo_str in ("SA", "Vic", "WA", "Tas"):
+        weight = 3
+    return(weight, geo_str)
+
+
+def get_dist_str(species):
+    geographies = get_geographies_pertinent_to(species).all()
+    states = []
+
+    for geo in geographies:
+        if geo.parent and geo.parent.code == "50" or geo.parent.parent.code == "50":
+                states.append(geo)
+
+    for geo in states:
+        geographies.remove(geo)
+    percent = int(options.get("match_percentage", 100))
+    allowable_children=int(options.get("minimum_children", 1))
+    consolidated = consolidate_geographies_by_percent_area(geographies, percent=percent, allowable_children=allowable_children)
+    all_geos = consolidated + states
+    consolidated_strs = [translations.get(str(i), str(i).title()) for i in all_geos]
+    if "North America" in consolidated_strs and "South America" in consolidated_strs:
+        consolidated_strs.remove("South America")
+        consolidated_strs.remove("North America")
+        consolidated_strs.append("Americas")
+    if "Tropical Asia" in consolidated_strs and "Temperate Asia" in consolidated_strs:
+        consolidated_strs.remove("Tropical Asia")
+        consolidated_strs.remove("Temperate Asia")
+        consolidated_strs.append("Asia")
+    return ", ".join(sorted(consolidated_strs, key=geo_sorter_key))
+
+%>\
+${get_dist_str(values[0])}
