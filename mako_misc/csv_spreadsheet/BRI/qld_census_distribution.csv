@@ -1,0 +1,37 @@
+## vim: set filetype=mako:
+## OPTION census_file: (type: file, default: '', tooltip: 'The location of the Qld Census CSV file')
+<%!
+import csv
+from bauble import db
+from sqlalchemy.orm.session import object_session
+from bauble.plugins.plants.species_model import SpeciesDistribution
+from bauble.plugins.plants.geography import Geography
+from bauble.plugins.report import get_species_pertinent_to, options
+
+sess = db.Session()
+
+qld = sess.query(Geography).filter(Geography.tdwg_code == 'QLD-QU').one()
+
+census_list = []
+
+with open(options.get('census_file'), 'r', encoding='latin-1', newline='') as f:
+    reader = csv.DictReader(f)
+    for line in reader:
+        if line.get('Naturalisation_Status') in ['Native to QLD', 'Native and naturalised in QLD']:
+            census_list.append(line.get('Taxon_Name'))
+%>\
+Taxa
+% for sp in get_species_pertinent_to(values, as_task=True):
+<% sp = sess.merge(sp) %>\
+% if sp.full_name in census_list and qld not in [dist.geography for dist in sp.distribution]:
+${sp.full_name}
+<%
+  dist = SpeciesDistribution(geography=qld)
+  sp.distribution.append(dist)
+%>\
+% endif
+% endfor
+<%
+  sess.commit()
+  sess.close()
+%>

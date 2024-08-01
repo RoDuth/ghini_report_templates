@@ -1,0 +1,21 @@
+## vim: set filetype=mako:
+## OPTION census_file: (type: file, default: '', tooltip: 'The location of the Qld Census CSV file')
+<%!
+import csv
+from bauble.plugins.report import get_species_pertinent_to, options
+
+census_dict = {}
+
+with open(options.get('census_file'), 'r', encoding='latin-1', newline='') as f:
+    reader = csv.DictReader(f)
+    for line in reader:
+        if line.get('Naturalisation_Status') in ['Native to QLD', 'Native and naturalised in QLD']:
+            census_dict[line.get('Taxon_Name')] = line.get('NCA_Status') or None
+%>\
+domain,id,string,nca_status
+species,id,species,nca_status
+% for sp in get_species_pertinent_to(values):
+% if sp.full_name in census_dict and sp.nca_status != census_dict[sp.full_name]:
+  species,${sp.id},${sp},"${census_dict[sp.full_name] or ''}"
+% endif
+% endfor

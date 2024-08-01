@@ -1,0 +1,49 @@
+## vim: set filetype=mako:
+## OPTION census_file: (type: file, default: '', tooltip: 'The location of the Qld Census CSV file')
+<%!
+import csv
+from bauble.plugins.report import get_species_pertinent_to, options
+
+
+def get_authorship_and_rank(full_sci_name, sp):
+    if sp.cultivar_epithet:
+        return (None, None)
+    if not full_sci_name.startswith(sp.genus.epithet):
+        return (None, None)
+    remainder = full_sci_name.removeprefix(sp.genus.epithet).strip()
+    remainder = remainder.removeprefix(sp.epithet).strip()
+    if sp.infraspecific_parts:
+        if remainder.startswith(sp.infraspecific_parts):
+            author = remainder.removeprefix(sp.infraspecific_parts).strip()
+            rank = max(i for i in range(1, 5) if getattr(sp, f'infrasp{i}'))
+        else:
+            author = remainder.removesuffix(sp.infraspecific_parts).strip()
+            rank = 0
+    else:
+        author = remainder
+        rank = 0
+    return author, rank
+
+census_dict = {}
+
+with open(options.get('census_file'), 'r', encoding='latin-1', newline='') as f:
+    reader = csv.DictReader(f)
+    for line in reader:
+        if line.get('Naturalisation_Status') in ['Native to QLD', 'Native and naturalised in QLD']:
+            census_dict[line.get('Taxon_Name')] = line.get('Botanical_Name')
+%>\
+domain,id,string,sp_author,infrasp1_author,infrasp2_author,infrasp3_author,infrasp4_author
+species,id,species,sp_author,infrasp1_author,infrasp2_author,infrasp3_author,infrasp4_author
+% for sp in get_species_pertinent_to(values):
+<%
+author = rank = None
+if sp.full_name in census_dict:
+    if sp.full_sci_name != census_dict[sp.full_name]:
+        author, rank = get_authorship_and_rank(census_dict[sp.full_name], sp)
+        if rank is not None:
+            author_csv_str = ','.join(f'"{author}"' if i == rank else '' for i in range(5))
+%>\
+% if (author and rank is not None):
+species,${sp.id},${sp},${author_csv_str}
+% endif
+% endfor

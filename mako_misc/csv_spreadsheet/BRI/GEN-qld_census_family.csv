@@ -1,0 +1,31 @@
+## vim: set filetype=mako:
+## OPTION census_file: (type: file, default: '', tooltip: 'The location of the Qld Census CSV file')
+## OPTION prefer_fabaceae: (type: boolean, default: 'true', tooltip: 'Use Fabaceae in place of Leguminosae')
+<%!
+import csv
+from bauble.plugins.report import options
+
+census_dict = {}
+
+with open(options.get('census_file'), 'r', encoding='latin-1', newline='') as f:
+    reader = csv.DictReader(f)
+    for line in reader:
+        if line.get('Naturalisation_Status') in ['Native to QLD', 'Native and naturalised in QLD']:
+            if line.get('Genus') not in census_dict:
+                fam = line.get('Family')
+                if fam == 'Leguminosae' and options.get('prefer_fabaceae'):
+                    fam = 'Fabaceae'
+                census_dict[line.get('Genus')] = fam
+%>\
+domain,id,genus,family,prior
+genus,id,genus,family.epithet,
+% for gen in values:
+<%
+  fam = None
+  if gen.epithet in census_dict:
+      fam = census_dict[gen.epithet]
+%>\
+% if fam and fam != gen.family.epithet:
+genus,${gen.id},${gen},${fam},${gen.family.epithet}
+% endif
+% endfor
