@@ -276,7 +276,7 @@ def json_to_kml_poly(coords):
             <extrude>1</extrude>
             <altitudeMode>relativeToGround</altitudeMode>
             <coordinates>
-              ${geo_line}
+              ${(geo_line + " ").replace(',0 ', ',0.2 ')}
             </coordinates>
           </LineString>
         % for point in geo_points:
