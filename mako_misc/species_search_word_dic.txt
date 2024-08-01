@@ -12,18 +12,18 @@ for species in values:
     for i in species.infrasp1.split():
       strings.add(i)
   if species.infrasp2:
-    for i in species.infrasp1.split():
+    for i in species.infrasp2.split():
       strings.add(i)
   if species.infrasp3:
-    for i in species.infrasp1.split():
+    for i in species.infrasp3.split():
       strings.add(i)
   if species.infrasp4:
-    for i in species.infrasp1.split():
+    for i in species.infrasp4.split():
       strings.add(i)
   strings.add(species.genus.genus)
   strings.add(species.genus.family.family)
 for i in strings:
-  i = i.strip(' ()&.')
+  i = i.strip(' ()&.\'')
   if len(i) > 1:
     all_strings.add(i)
 %>\
