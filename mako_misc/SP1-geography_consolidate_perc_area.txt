@@ -30,7 +30,7 @@ def geo_sorter_key(geo_str):
         weight = 1
     elif geo_str == "NT":
         weight = 2
-    elif geo_str in ("SA", "Vic", "WA", "Tas"):
+    elif geo_str in ("SA", "Vic", "WA", "Tas", "Norfolk Is."):
         weight = 3
     return(weight, geo_str)
 
@@ -45,6 +45,7 @@ def get_dist_str(species):
 
     for geo in states:
         geographies.remove(geo)
+
     percent = int(options.get("match_percentage", 100))
     allowable_children=int(options.get("minimum_children", 1))
     consolidated = consolidate_geographies_by_percent_area(geographies, percent=percent, allowable_children=allowable_children)
@@ -58,6 +59,8 @@ def get_dist_str(species):
         consolidated_strs.remove("Tropical Asia")
         consolidated_strs.remove("Temperate Asia")
         consolidated_strs.append("Asia")
+    if set(["Asia", "Americas", "Africa", "Europe", "Pacific", "Qld", "NSW", "NT", "WA", "SA", "Tas", "Vic"]).issubset(consolidated_strs):
+        return "Global"
     return ", ".join(sorted(consolidated_strs, key=geo_sorter_key))
 
 %>\
