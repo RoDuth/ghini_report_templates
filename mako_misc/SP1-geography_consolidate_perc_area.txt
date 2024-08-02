@@ -1,4 +1,4 @@
-## vim: filetype=mako:foldmethod=marker
+## vim: filetype=mako
 ## OPTION match_percentage: (type: string, default: '34', tooltip: 'The percentage of the area required to consolidate to the parent level')
 ## OPTION minimum_children: (type: string, default: '2', tooltip: 'The number of children required to consolidate to the parent level')
 <%!
@@ -8,17 +8,17 @@ from bauble.plugins.report import get_geographies_pertinent_to, options
 from bauble.plugins.plants.geography import consolidate_geographies_by_percent_area
 
 translations = {
-   	"ASIA-TROPICAL": "Tropical Asia",
-   	"ASIA-TEMPERATE": "Temperate Asia",
-   	"SOUTHERN AMERICA": "South America",
-   	"NORTHERN AMERICA": "North America",
-   	"Queensland": "Qld",
-   	"New South Wales": "NSW",
-   	"Northern Territory": "NT",
-   	"Western Australia": "WA",
-   	"South Australia": "SA",
-   	"Tasmania": "Tas",
-   	"Victoria": "Vic",
+    "ASIA-TROPICAL": "Tropical Asia",
+    "ASIA-TEMPERATE": "Temperate Asia",
+    "SOUTHERN AMERICA": "South America",
+    "NORTHERN AMERICA": "North America",
+    "Queensland": "Qld",
+    "New South Wales": "NSW",
+    "Northern Territory": "NT",
+    "Western Australia": "WA",
+    "South Australia": "SA",
+    "Tasmania": "Tas",
+    "Victoria": "Vic",
 }
 
 
