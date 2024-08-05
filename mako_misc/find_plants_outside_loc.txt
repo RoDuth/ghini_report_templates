@@ -1,0 +1,37 @@
+## vim:set ft=mako:
+## OPTION reveal_in_search: (type: boolean, default: 'false', tooltip: 'If any plants are found, run a search to reveal them')
+<%!
+import bauble
+from bauble.plugins.report import get_plants_pertinent_to
+from bauble.plugins.report import options
+from bauble.utils.geo import is_point_within_poly
+%>\
+<%
+  plants = []
+  for p in get_plants_pertinent_to(values, as_task=True):
+    if p.geojson and p.location.geojson:
+      type_ = p.geojson["type"]
+      coords = p.geojson["coordinates"]
+      loc_coords = p.location.geojson['coordinates']
+      if type_ == "Point":
+        if not is_point_within_poly(*coords, loc_coords):
+          plants.append(p)
+      elif type_ == "LineString":
+        for point in coords:
+          if not is_point_within_poly(*point, loc_coords):
+            plants.append(p)
+            continue
+      elif type_ == "Polygon":
+        for point in coords[0]:
+          if not is_point_within_poly(*point, loc_coords):
+            plants.append(p)
+            continue
+%>\
+% for i in plants:
+${i}
+% endfor
+<%
+  if options.get("reveal_in_search") and plants:
+    ids = ", ".join(str(p.id) for p in plants)
+    bauble.gui.send_command(f"plant where id in {ids}")
+%>\
